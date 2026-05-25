@@ -1,0 +1,138 @@
+{
+  "domain": "code",
+  "display_name": "编程/开发/技术",
+  "keywords": ["代码", "code", "编程", "programming", "开发", "develop", "API", "app", "应用", "网站", "website", "前端", "frontend", "后端", "backend", "数据库", "database", "算法", "algorithm", "自动化", "automation", "爬虫", "scraper", "bot", "机器人", "插件", "plugin", "extension", "脚本", "script", "全栈", "fullstack", "微服务", "部署", "deploy", "React", "Vue", "Python", "JavaScript", "TypeScript"],
+
+  "expert_role": "你现在是一位在Google/Stripe级别公司工作了15年的首席架构师。你精通从需求分析到生产部署的全流程。你知道：好的API设计是RESTful不是REST-ish；数据库不是'用MySQL'而是要考虑读写比、索引策略、分库分表阈值；架构不是'前后端分离'而是要明确SSR/CSR/ISR的取舍；性能不是'快一点'而是P99 < 200ms。你review过上千个PR，见过所有常见的反模式。",
+
+  "must_ask_dimensions": [
+    {
+      "dimension": "核心用例与用户流",
+      "why": "技术方案必须服务于具体的用户场景——没有用户流的架构设计是空中楼阁",
+      "example_questions": [
+        "用户从打开到完成核心目标，每一步操作是什么？",
+        "最高频的3个操作是什么？每个操作的输入和期望输出？",
+        "有没有需要实时反馈的操作（如协同编辑、实时聊天）？"
+      ],
+      "bad_question": "这个应用是做什么的？",
+      "good_question": "描述一个典型用户的完整操作流：从他打开你的产品开始——第一个页面看到什么？点击什么按钮？输入什么数据？等待多久？看到什么结果？哪一步如果超过3秒他就会离开？哪一步最容易出错？"
+    },
+    {
+      "dimension": "技术栈与架构偏好",
+      "why": "技术选型不是选最好的，是选最适合团队和场景的",
+      "example_questions": [
+        "你或你的团队最熟悉什么技术栈？",
+        "有没有已有的系统需要集成？已有的代码库是什么语言？",
+        "需要跨平台吗？Web/iOS/Android/桌面？"
+      ],
+      "bad_question": "你想用什么技术？",
+      "good_question": "你的技术背景和偏好是什么？比如：你是熟悉React生态（Next.js/Vercel那一套）、还是Vue生态（Nuxt/Vite）、还是更偏后端（Python/Go/Java）？已经有在用的数据库吗（PostgreSQL/MongoDB/Firebase）？有没有必须集成的第三方服务（Stripe支付、AWS/Vercel部署、OAuth登录）？还是从零开始你来决定？"
+    },
+    {
+      "dimension": "数据模型与状态管理",
+      "why": "数据结构决定了80%的代码复杂度——选错数据模型等于给自己挖坑",
+      "example_questions": [
+        "核心数据实体有哪些？它们之间的关系是什么？",
+        "数据量级是什么？百条、万条、还是百万条？",
+        "需要离线支持吗？数据冲突怎么处理？"
+      ],
+      "bad_question": "数据库怎么设计？",
+      "good_question": "你的核心数据长什么样？比如一个电商平台的核心是：用户→订单→商品，关系是一对多。你的产品里，最核心的3个数据实体是什么？它们之间是一对一、一对多、还是多对多的关系？数据量级大概是多少——几百条（SQLite就够了）、几万条（单机PostgreSQL）、还是几百万条以上（需要考虑分库或NoSQL）？"
+    },
+    {
+      "dimension": "性能、规模与约束",
+      "why": "过早优化是万恶之源，但完全不考虑规模是另一种灾难",
+      "example_questions": [
+        "预期有多少用户？峰值并发？",
+        "有没有预算约束？想用免费服务还是愿意付费？",
+        "最关键的性能指标是什么？首屏加载时间？API响应时间？"
+      ],
+      "bad_question": "性能要求是什么？",
+      "good_question": "这个产品的规模预期是什么阶段？1) MVP/个人项目（几十个用户，Vercel免费套餐+Supabase就够了）2) 早期产品（几千用户，需要考虑基本的缓存和CDN）3) 增长期（几万用户，需要负载均衡和数据库优化）4) 规模化（几十万+，需要微服务/消息队列/分布式架构）？有预算约束吗？"
+    },
+    {
+      "dimension": "边界情况与安全",
+      "why": "80%的线上事故来自未考虑的边界情况——你的系统只有在出错时才暴露真正的设计水平",
+      "example_questions": [
+        "用户如果输入了恶意数据怎么办？需要什么级别的输入校验？",
+        "需要用户认证吗？权限模型是什么？",
+        "如果第三方服务挂了（支付/邮件/存储），你的系统怎么降级？"
+      ],
+      "bad_question": "安全怎么处理？",
+      "good_question": "让我们想想会出什么问题：1) 用户认证——需要注册登录吗？邮箱/手机/OAuth？需要角色权限（管理员/普通用户/访客）吗？2) 数据安全——有敏感数据吗（支付信息/个人隐私）？需要加密存储吗？3) 网络异常——用户网络断了提交到一半怎么办？需要乐观更新还是必须等服务端确认？4) 并发冲突——两个用户同时编辑同一条数据怎么处理？"
+    },
+    {
+      "dimension": "不要什么（反模式）",
+      "why": "避免过度设计比做对设计更重要——很多项目死于复杂度而不是功能不够",
+      "example_questions": [
+        "有没有你明确不想用的技术或模式？",
+        "复杂度上限在哪里？你能维护多复杂的系统？",
+        "有没有你踩过坑的技术选型？"
+      ],
+      "bad_question": "有什么不想要的？",
+      "good_question": "你明确想避免什么？比如：不想要过度抽象的企业级架构（Spring Boot那种一个CRUD要写8个文件）？不想用ORM（想直接写SQL）？不想引入Kubernetes（Docker Compose就够了）？不想用TypeScript（项目太小不值得）？或者相反——有没有你踩过坑、再也不想碰的技术？"
+    }
+  ],
+
+  "output_structure": {
+    "sections": [
+      {"name": "项目概述", "description": "一句话描述产品、核心功能列表（按优先级排序）、MVP范围、技术约束"},
+      {"name": "用户流程", "description": "完整的用户操作流程图（文字版），含每一步的页面/组件、用户操作、系统响应、等待时间预期"},
+      {"name": "技术架构", "description": "技术栈选型（带选型理由）、系统架构图（文字版）、前后端通信方式、部署架构"},
+      {"name": "数据模型", "description": "核心实体定义（字段+类型）、实体关系图（文字版）、索引策略、数据迁移考虑"},
+      {"name": "API设计", "description": "核心端点列表（Method + Path + 请求体 + 响应体）、认证方式、错误码规范、分页策略"},
+      {"name": "前端架构", "description": "页面/路由结构、组件层次、状态管理方案、关键交互细节"},
+      {"name": "边界情况与安全", "description": "输入校验规则、认证授权流程、错误处理策略、降级方案、并发处理"},
+      {"name": "Negative", "description": "不要使用的技术/框架、要避免的反模式（过度抽象/过早优化/God Class）、不要的架构决策"}
+    ],
+    "good_example_summary": "项目概述：一个面向独立开发者的API监控仪表盘。核心功能：1) 实时监控API响应时间和错误率 2) 异常告警（邮件+Webhook）3) 历史数据可视化（趋势图+百分位分布）。MVP范围：单用户、最多监控10个端点、保留7天数据。\n\n用户流程：\n1. 用户注册/登录（GitHub OAuth）→ 看到空的Dashboard\n2. 点击'Add Endpoint' → 输入URL、检测频率（1min/5min/15min）、期望响应时间阈值 → 系统开始定时检测\n3. Dashboard实时显示：每个端点的当前状态（绿/黄/红）、最近1小时响应时间曲线、错误率百分比\n4. 点击某个端点 → 详情页：24小时时间线、P50/P95/P99响应时间、HTTP状态码分布、最近10次失败的详细信息\n5. 设置告警规则 → 响应时间 > 阈值连续3次 → 发送告警\n\n技术架构：\n- 前端：Next.js 14 (App Router) + Tailwind CSS + Recharts图表\n- 后端：Next.js API Routes（轻量，不需要单独后端）\n- 数据库：Supabase (PostgreSQL) — 免费套餐500MB足够MVP\n- 定时任务：Vercel Cron Jobs（免费套餐支持每日1次，升级后支持每分钟）或 Upstash QStash\n- 部署：Vercel（前端+API一体）\n- 选型理由：独立开发者、MVP阶段、预算为零 → 全部用免费套餐，单一框架减少复杂度\n\n数据模型：\n- User: { id, github_id, email, created_at }\n- Endpoint: { id, user_id(FK), url, method, check_interval, timeout_threshold, status, created_at }\n- CheckResult: { id, endpoint_id(FK), status_code, response_time_ms, error_message, checked_at }\n- AlertRule: { id, endpoint_id(FK), condition_type, threshold, consecutive_count, notify_via }\n- 索引：CheckResult(endpoint_id, checked_at DESC) — 查询最近N次检测结果是最高频操作\n\nAPI设计：\n- POST /api/endpoints — 创建监控端点 { url, method, check_interval, timeout_threshold }\n- GET /api/endpoints — 获取所有端点列表（含当前状态）\n- GET /api/endpoints/:id/checks?period=24h — 获取检测历史（分页，默认最近24小时）\n- POST /api/endpoints/:id/alerts — 创建告警规则\n- 认证：NextAuth.js + GitHub OAuth，API用session cookie\n- 错误码：400（校验失败）、401（未登录）、404（端点不存在）、429（频率限制）\n\nNegative：不要用微服务架构（MVP阶段完全不需要）。不要引入Redis缓存（数据量太小，PostgreSQL直接查）。不要用GraphQL（REST足够，减少学习成本）。不要写自己的定时任务调度器（用现成的Cron服务）。不要过度抽象——不要Repository Pattern、不要Service Layer，直接在API Route里写Supabase查询。不要做多用户权限系统（MVP是单用户）。",
+    "round4_density_rules": "## 密度硬性要求：\n- 项目概述：至少80字，必须包含一句话描述+核心功能列表（按优先级）+MVP范围+明确的排除范围\n- 用户流程：至少200字，完整的step-by-step操作流（从注册到完成核心目标），每步必须包含：页面/组件→用户操作→系统响应→等待时间预期\n- 技术架构：至少200字，每个技术选型必须带选型理由（不是'用React'而是'用Next.js 14 App Router——SSR支持SEO，API Routes省去单独后端'），包含前端+后端+数据库+部署+第三方服务\n- 数据模型：至少150字，核心实体必须有字段名+类型定义，实体间必须标明关系（1:1/1:N/N:N），必须有索引策略说明\n- API设计：至少150字，核心端点必须有Method+Path+请求体+响应体+错误码，认证方式，分页策略\n- 前端架构：至少100字，必须有路由结构+组件层次+状态管理方案+关键交互\n- 边界情况与安全：至少80字，必须覆盖输入校验+认证授权+错误处理+并发处理\n- Negative：至少列12个具体禁止项，分为：技术选型禁止（不要用什么框架/库）、架构反模式禁止（不要过度抽象/过早优化）、设计决策禁止\n- 总长度：至少1500字"
+  },
+
+  "round1_preset_vague": {
+    "intro": "开发项目——先画清楚用户流，技术选型才有意义。",
+    "questions": [
+      {
+        "question": "这个产品一句话描述是什么？用户用它解决什么问题？",
+        "multi_select": false,
+        "allow_text": true,
+        "text_placeholder": "比如：一个让团队管理任务的工具，像简化版的Jira...",
+        "options": [
+          {"label": "SaaS工具", "description": "像Notion/Linear/Figma——用户注册登录、有工作空间、按月付费"},
+          {"label": "电商/交易平台", "description": "像淘宝/Stripe——有商品、购物车、支付、订单流程"},
+          {"label": "社交/内容平台", "description": "像小红书/Twitter——用户发内容、关注、互动、有Feed流"},
+          {"label": "管理后台/Dashboard", "description": "像Grafana/Admin面板——数据可视化、表格、筛选、导出"},
+          {"label": "API/自动化服务", "description": "像Zapier/后端服务——没有用户界面，纯API或定时任务"},
+          {"label": "其他 / 让我自己描述", "description": "你的项目类型不在上面"}
+        ]
+      },
+      {
+        "question": "有没有参考产品？'像XX的XX'最能帮我理解你要什么。",
+        "multi_select": false,
+        "allow_text": true,
+        "text_placeholder": "比如：像Notion的文档管理 + Linear的项目跟踪，但更简单...",
+        "options": []
+      },
+      {
+        "question": "你的技术背景是什么？这决定了方案的复杂度上限。",
+        "multi_select": false,
+        "allow_text": true,
+        "text_placeholder": "比如：熟悉React和Node.js，用过PostgreSQL...",
+        "options": [
+          {"label": "全栈开发者", "description": "前后端都能写，熟悉至少一个完整技术栈，能自己部署"},
+          {"label": "前端为主", "description": "React/Vue很熟，后端需要简单方案（Supabase/Firebase/Next.js API）"},
+          {"label": "后端为主", "description": "Python/Go/Java很熟，前端需要简单方案或模板"},
+          {"label": "非技术/学习中", "description": "需要最简单的方案，最好是低代码或一个框架搞定所有"},
+          {"label": "其他 / 让我自己描述", "description": "你的情况比较特殊"}
+        ]
+      }
+    ]
+  },
+
+  "round_guidance": {
+    "round1": "Round 1 — 理解核心需求和范围。如果用户只说了'开发一个Web应用'这种模糊描述，先问：1) 这个产品一句话描述是什么？用户用它来解决什么具体问题？（SaaS工具/电商平台/社交应用/管理后台/API服务/Chrome插件/自动化脚本——给具体选项，每个附带一句典型例子）2) 有没有参考产品？（'像Notion的XX'或'像Stripe的XX'）3) 你的技术背景——是全栈开发者、前端为主、后端为主、还是非技术人员需要完整方案？如果用户已经说了具体需求，直接问：核心用户操作流（从打开到完成目标）、技术栈偏好、MVP的最小范围是什么。",
+    "round2": "Round 2 — ⚠️这是最后一轮提问！像Google的架构评审一样深挖：不是'用什么数据库'而是'你的数据读写比是多少？需要事务吗？需要全文搜索吗？'必须在这一轮问完所有关键维度：1) 数据模型的核心实体和关系 2) 认证授权需求 3) 预算和部署约束 4) 明确不想要的技术或模式。不会再有提问机会了。",
+    "round3": "Round 3 — 直接生成！不要再问任何问题。先写summary（像一份Executive Summary），然后设prompt_ready=true，生成final_prompt。必须包含：项目概述、用户流程（步骤级）、技术架构（带选型理由）、数据模型（字段级）、API设计（端点级）、前端架构、边界情况与安全、Negative。",
+    "round4": "Round 4 — 如果还没生成，立刻生成。格式同round3。"
+  }
+}
