@@ -224,6 +224,13 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
   .q-opt{flex:1 1 100%;min-width:0}
   .msg-user{max-width:90%}
   .export-bar{flex-direction:column}
+  /* Better mobile input area */
+  #chatArea{padding-bottom:80px}
+  .prompt-card{padding:14px}
+  .prompt-rendered{padding:14px;font-size:13px}
+  .summary-card{padding:12px}
+  .welcome-how{flex-direction:column;gap:12px}
+  .welcome-how>div:nth-child(2),.welcome-how>div:nth-child(4){display:none}
 }
 </style>
 </head>
@@ -340,7 +347,7 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
           Describe your idea, even vaguely. I'll ask expert questions to read your mind, then generate the perfect prompt.
         </p>
         <!-- How it works -->
-        <div class="flex gap-6 mb-8 max-w-lg text-left" style="font-size:12px">
+        <div class="welcome-how flex gap-6 mb-8 max-w-lg text-left" style="font-size:12px">
           <div class="flex-1">
             <div style="color:#818cf8;font-weight:700;margin-bottom:2px">1. Describe</div>
             <div style="color:#71717a">Tell me your idea, even a single sentence</div>
@@ -748,11 +755,15 @@ async function submitAnswers(roundId) {
   showTyping();
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000);
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: currentSession, user_id: userId, message: answers.join('\n\n'), model: currentModel }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.error || `Server error ${res.status}`); }
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -763,7 +774,8 @@ async function submitAnswers(roundId) {
     addAiRound(data);
   } catch (err) {
     hideTyping();
-    showError(err.message, () => submitAnswers(roundId));
+    const msg = err.name === 'AbortError' ? 'Request timed out. Please try again.' : err.message;
+    showError(msg, () => submitAnswers(roundId));
   }
 }
 
@@ -804,7 +816,9 @@ function showError(msg, retryFn) {
   if (existing) existing.remove();
   const toast = document.createElement('div');
   toast.className = 'error-toast';
-  toast.innerHTML = `<span>&#9888; ${esc(msg || 'Connection error')}</span>
+  const isNetwork = !msg || msg === 'Failed to fetch' || msg.includes('network') || msg.includes('NetworkError');
+  const displayMsg = isNetwork ? 'Network error — check your connection' : msg;
+  toast.innerHTML = `<span>&#9888; ${esc(displayMsg)}</span>
     ${retryFn ? '<button onclick="this.parentElement._retry()">Retry</button>' : ''}
     <button onclick="this.parentElement.remove()" style="background:#7f1d1d">&#10005;</button>`;
   if (retryFn) toast._retry = () => { toast.remove(); retryFn(); };
@@ -1039,11 +1053,15 @@ chatForm.addEventListener('submit', async e => {
   showTyping();
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: currentSession, user_id: userId, message: msg, model: currentModel }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.error || `Server error ${res.status}`); }
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -1054,7 +1072,8 @@ chatForm.addEventListener('submit', async e => {
     addAiRound(data);
   } catch (err) {
     hideTyping();
-    showError(err.message);
+    const msg2 = err.name === 'AbortError' ? 'Request timed out. Please try again.' : err.message;
+    showError(msg2);
   }
   sendBtn.disabled = !chatInput.value.trim();
   chatInput.focus();
