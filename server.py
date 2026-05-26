@@ -512,6 +512,16 @@ async def index():
     return HTMLResponse(html_path.read_text(encoding="utf-8"))
 
 
+@app.get("/health")
+async def health():
+    """Health check endpoint for monitoring."""
+    return {
+        "status": "ok",
+        "domains": len(DOMAIN_EXPERTS),
+        "kb_prompts": len(KNOWLEDGE_BASE),
+    }
+
+
 @app.post("/api/chat")
 async def chat(request: Request):
     # --- Rate limiting ---
