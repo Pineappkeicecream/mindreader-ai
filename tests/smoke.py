@@ -62,6 +62,17 @@ def main() -> None:
     assert any(p["id"] == prompt_id for p in gallery.json())
     db.delete_prompt(prompt_id)
 
+    db.save_session("smoke-user-a", "general", "hybrid", "user a", user_id="smoke-a")
+    db.save_session("smoke-user-b", "general", "hybrid", "user b", user_id="smoke-b")
+    prompt_a = db.save_prompt("smoke-user-a", "## A\n" + ("a " * 300), "user a private", "general", "a")
+    prompt_b = db.save_prompt("smoke-user-b", "## B\n" + ("b " * 300), "user b private", "general", "b")
+    mine = client.get("/api/prompts?limit=50&user_id=smoke-a")
+    ids = {p["id"] for p in mine.json()}
+    assert prompt_a in ids
+    assert prompt_b not in ids
+    db.delete_prompt(prompt_a)
+    db.delete_prompt(prompt_b)
+
     print("Smoke checks passed")
 
 

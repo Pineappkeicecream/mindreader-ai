@@ -1205,7 +1205,7 @@ async function loadSessions() {
 async function loadLibrary() {
   const panel = document.getElementById('libraryPanel');
   try {
-    const res = await fetch('/api/prompts?limit=30');
+    const res = await fetch(`/api/prompts?limit=30&user_id=${userId}`);
     const prompts = await res.json();
     let html = `<div class="px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">${t('savedPrompts')}</div>`;
     if (prompts.length === 0) {

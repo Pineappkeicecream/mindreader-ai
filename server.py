@@ -1295,9 +1295,9 @@ async def format_prompt(request: Request):
 
 
 @app.get("/api/history")
-async def history():
+async def history(user_id: str = ""):
     """Return recent prompts for sidebar (DB-backed)."""
-    prompts = database.get_prompts(limit=20)
+    prompts = database.get_prompts(limit=20, user_id=user_id)
     items = []
     for p in prompts:
         items.append({
@@ -1312,9 +1312,14 @@ async def history():
 
 
 @app.get("/api/prompts")
-async def list_prompts(limit: int = 20, offset: int = 0, domain: str | None = None):
+async def list_prompts(
+    limit: int = 20,
+    offset: int = 0,
+    domain: str | None = None,
+    user_id: str = "",
+):
     """Return saved prompts with pagination."""
-    prompts = database.get_prompts(limit=limit, offset=offset, domain=domain)
+    prompts = database.get_prompts(limit=limit, offset=offset, domain=domain, user_id=user_id)
     return prompts
 
 

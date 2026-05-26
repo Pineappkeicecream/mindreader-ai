@@ -325,10 +325,35 @@ def save_prompt(session_id: str, final_prompt: str, summary: str, domain: str, p
     return prompt_id
 
 
-def get_prompts(limit: int = 20, offset: int = 0, domain: str | None = None) -> list[dict]:
+def get_prompts(
+    limit: int = 20,
+    offset: int = 0,
+    domain: str | None = None,
+    user_id: str = "",
+) -> list[dict]:
     conn = _connect()
     cur = conn.cursor()
-    if domain:
+    if domain and user_id:
+        cur.execute(
+            f"""SELECT p.id, p.session_id, p.summary, p.domain, p.preview_text, p.char_count,
+                       p.section_count, p.is_public, p.created_at
+            FROM prompts p
+            JOIN sessions s ON s.id = p.session_id
+            WHERE p.deleted_at IS NULL AND p.domain = {_PH} AND s.user_id = {_PH}
+            ORDER BY p.created_at DESC LIMIT {_PH} OFFSET {_PH}""",
+            (domain, user_id, limit, offset),
+        )
+    elif user_id:
+        cur.execute(
+            f"""SELECT p.id, p.session_id, p.summary, p.domain, p.preview_text, p.char_count,
+                       p.section_count, p.is_public, p.created_at
+            FROM prompts p
+            JOIN sessions s ON s.id = p.session_id
+            WHERE p.deleted_at IS NULL AND s.user_id = {_PH}
+            ORDER BY p.created_at DESC LIMIT {_PH} OFFSET {_PH}""",
+            (user_id, limit, offset),
+        )
+    elif domain:
         cur.execute(
             f"SELECT id, session_id, summary, domain, preview_text, char_count, section_count, is_public, created_at "
             f"FROM prompts WHERE deleted_at IS NULL AND domain = {_PH} ORDER BY created_at DESC LIMIT {_PH} OFFSET {_PH}",
