@@ -131,6 +131,7 @@ def init_db() -> None:
             preview_text TEXT DEFAULT '',
             char_count INTEGER DEFAULT 0,
             section_count INTEGER DEFAULT 0,
+            is_public INTEGER DEFAULT 0,
             created_at {_REAL_TYPE} NOT NULL,
             deleted_at {_REAL_TYPE},
             FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
@@ -149,6 +150,13 @@ def init_db() -> None:
         cur.execute("ALTER TABLE prompts ADD COLUMN rating INTEGER DEFAULT 0")
         conn.commit()
         print("Migration: added rating column to prompts")
+    except Exception:
+        conn.rollback()  # column already exists
+
+    try:
+        cur.execute("ALTER TABLE prompts ADD COLUMN is_public INTEGER DEFAULT 0")
+        conn.commit()
+        print("Migration: added is_public column to prompts")
     except Exception:
         conn.rollback()  # column already exists
 
@@ -322,13 +330,13 @@ def get_prompts(limit: int = 20, offset: int = 0, domain: str | None = None) -> 
     cur = conn.cursor()
     if domain:
         cur.execute(
-            f"SELECT id, session_id, summary, domain, preview_text, char_count, section_count, created_at "
+            f"SELECT id, session_id, summary, domain, preview_text, char_count, section_count, is_public, created_at "
             f"FROM prompts WHERE deleted_at IS NULL AND domain = {_PH} ORDER BY created_at DESC LIMIT {_PH} OFFSET {_PH}",
             (domain, limit, offset),
         )
     else:
         cur.execute(
-            f"SELECT id, session_id, summary, domain, preview_text, char_count, section_count, created_at "
+            f"SELECT id, session_id, summary, domain, preview_text, char_count, section_count, is_public, created_at "
             f"FROM prompts WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT {_PH} OFFSET {_PH}",
             (limit, offset),
         )
@@ -345,9 +353,9 @@ def get_gallery_prompts(limit: int = 30, offset: int = 0, domain: str | None = N
     if domain:
         cur.execute(
             f"""SELECT id, session_id, summary, domain, preview_text, char_count, section_count,
-                       rating, created_at
+                       rating, is_public, created_at
             FROM prompts
-            WHERE deleted_at IS NULL AND domain = {_PH} AND char_count >= 500
+            WHERE deleted_at IS NULL AND is_public = 1 AND domain = {_PH} AND char_count >= 500
             ORDER BY rating DESC, created_at DESC
             LIMIT {_PH} OFFSET {_PH}""",
             (domain, limit, offset),
@@ -355,9 +363,9 @@ def get_gallery_prompts(limit: int = 30, offset: int = 0, domain: str | None = N
     else:
         cur.execute(
             f"""SELECT id, session_id, summary, domain, preview_text, char_count, section_count,
-                       rating, created_at
+                       rating, is_public, created_at
             FROM prompts
-            WHERE deleted_at IS NULL AND char_count >= 500
+            WHERE deleted_at IS NULL AND is_public = 1 AND char_count >= 500
             ORDER BY rating DESC, created_at DESC
             LIMIT {_PH} OFFSET {_PH}""",
             (limit, offset),
@@ -402,6 +410,21 @@ def rate_prompt(prompt_id: int, rating: int) -> bool:
     cur.execute(
         f"UPDATE prompts SET rating = {_PH} WHERE id = {_PH} AND deleted_at IS NULL",
         (rating, prompt_id),
+    )
+    conn.commit()
+    affected = cur.rowcount
+    cur.close()
+    conn.close()
+    return affected > 0
+
+
+def set_prompt_public(prompt_id: int, is_public: bool) -> bool:
+    """Publish or unpublish a prompt from the public gallery."""
+    conn = _connect()
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE prompts SET is_public = {_PH} WHERE id = {_PH} AND deleted_at IS NULL",
+        (1 if is_public else 0, prompt_id),
     )
     conn.commit()
     affected = cur.rowcount

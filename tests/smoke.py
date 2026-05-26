@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 from fastapi.testclient import TestClient
 
 import server
+import db
 
 
 def main() -> None:
@@ -40,6 +41,26 @@ def main() -> None:
     )
     assert formatted.status_code == 200
     assert "--ar" in formatted.json()["formatted"]
+
+    unique_summary = "Smoke private gallery check"
+    db.save_session("smoke-gallery-session", "general", "hybrid", "smoke gallery")
+    prompt_id = db.save_prompt(
+        "smoke-gallery-session",
+        "## Scene\n" + ("private gallery test prompt " * 40),
+        unique_summary,
+        "general",
+        "smoke gallery",
+    )
+    gallery = client.get("/api/gallery?limit=50")
+    assert gallery.status_code == 200
+    assert all(p["id"] != prompt_id for p in gallery.json())
+
+    publish = client.post(f"/api/prompts/{prompt_id}/publish", json={"is_public": True})
+    assert publish.status_code == 200
+    assert publish.json()["ok"] is True
+    gallery = client.get("/api/gallery?limit=50")
+    assert any(p["id"] == prompt_id for p in gallery.json())
+    db.delete_prompt(prompt_id)
 
     print("Smoke checks passed")
 

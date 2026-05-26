@@ -1343,6 +1343,15 @@ async def rate_prompt(prompt_id: int, request: Request):
     return {"ok": ok, "rating": rating}
 
 
+@app.post("/api/prompts/{prompt_id}/publish")
+async def publish_prompt(prompt_id: int, request: Request):
+    """Publish or unpublish a prompt from the public gallery."""
+    body = await request.json()
+    is_public = bool(body.get("is_public", True))
+    ok = database.set_prompt_public(prompt_id, is_public)
+    return {"ok": ok, "is_public": is_public}
+
+
 @app.get("/api/session/{session_id}")
 async def get_session(session_id: str):
     """Replay a session's messages from DB."""

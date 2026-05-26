@@ -480,6 +480,7 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
         <span class="domain-badge general" id="modalDomain">general</span>
       </div>
       <div class="flex items-center gap-2">
+        <button onclick="toggleModalGalleryPublish()" class="export-btn" id="modalGalleryBtn">&#10024; Gallery</button>
         <button onclick="copyModalPrompt()" class="export-btn primary" id="modalCopyBtn">&#128203; Copy</button>
         <button onclick="closePromptModal()" class="export-btn">&#10005; Close</button>
       </div>
@@ -518,6 +519,8 @@ const i18n = {
     continueBtn: 'Continue →',
     yourPrompt: '✨ Your Perfect Prompt',
     copyRaw: '📋 Copy Raw', shareLink: '🔗 Share Link',
+    publishGallery: '✨ Publish to Gallery',
+    removeGallery: '✓ In Gallery',
     howsPrompt: "How's this prompt?",
     startNew: '+ Start a new creation',
     reading: 'Reading your mind...',
@@ -577,6 +580,8 @@ const i18n = {
     continueBtn: '继续 →',
     yourPrompt: '✨ 你的完美Prompt',
     copyRaw: '📋 复制原文', shareLink: '🔗 分享链接',
+    publishGallery: '✨ 发布到画廊',
+    removeGallery: '✓ 已在画廊',
     howsPrompt: '这个prompt怎么样？',
     startNew: '+ 开始新的创作',
     reading: '正在读取你的想法...',
@@ -851,6 +856,7 @@ function addAiRound(data) {
         <button class="export-btn" onclick="copyForTool('${promptId}','dalle',this)">&#127748; DALL-E</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','sd',this)">&#129302; Stable Diffusion</button>
         ${data.prompt_id ? `<button class="export-btn" onclick="sharePrompt(${data.prompt_id},this)">${t('shareLink')}</button>` : ''}
+        ${data.prompt_id ? `<button class="export-btn" id="publish-${data.prompt_id}" onclick="toggleGalleryPublish(${data.prompt_id},true,this)">${t('publishGallery')}</button>` : ''}
       </div>
       ${data.prompt_id ? `<div class="rating-bar">
         <span class="rate-label">${t('howsPrompt')}</span>
@@ -1127,6 +1133,29 @@ function sharePrompt(promptId, btn) {
   });
 }
 
+async function toggleGalleryPublish(promptId, isPublic, btn, rewire = true) {
+  const original = btn.innerHTML;
+  btn.innerHTML = '&#8987;...';
+  try {
+    const res = await fetch(`/api/prompts/${promptId}/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_public: isPublic }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to update gallery');
+    btn.innerHTML = data.is_public ? t('removeGallery') : t('publishGallery');
+    btn.classList.toggle('copied', data.is_public);
+    if (rewire) btn.onclick = () => toggleGalleryPublish(promptId, !data.is_public, btn);
+    loadLibrary();
+    return data.is_public;
+  } catch (err) {
+    btn.innerHTML = original;
+    showError(err.message || 'Failed to update gallery');
+    return null;
+  }
+}
+
 // ===== Sidebar tabs =====
 function switchTab(tab) {
   document.getElementById('tabSessions').classList.toggle('active', tab === 'sessions');
@@ -1189,6 +1218,7 @@ async function loadLibrary() {
         <div class="flex items-center gap-2">
           <span class="domain-badge ${p.domain}" style="font-size:8px;padding:1px 4px">${p.domain}</span>
           <span class="text-zinc-400 text-xs font-medium">#${p.id}</span>
+          ${p.is_public ? '<span class="text-[9px] text-emerald-400 font-semibold">Gallery</span>' : ''}
         </div>
         <div class="lib-preview">${esc(p.preview_text || p.summary || 'Prompt')}</div>
         <div class="lib-meta">
@@ -1224,6 +1254,11 @@ async function openPrompt(id) {
 
     document.getElementById('modalPromptContent').innerHTML = renderMarkdown(p.final_prompt);
     window._modalPromptRaw = p.final_prompt;
+    window._modalPromptId = p.id;
+    window._modalPromptPublic = !!p.is_public;
+    const galleryBtn = document.getElementById('modalGalleryBtn');
+    galleryBtn.textContent = window._modalPromptPublic ? t('removeGallery') : t('publishGallery');
+    galleryBtn.classList.toggle('copied', window._modalPromptPublic);
     document.getElementById('promptModal').classList.remove('hidden');
     // Close sidebar on mobile
     document.getElementById('sidebar').classList.remove('open');
@@ -1245,6 +1280,13 @@ function copyModalPrompt() {
     btn.classList.add('copied');
     setTimeout(() => { btn.innerHTML = '&#128203; Copy'; btn.classList.remove('copied'); }, 2000);
   });
+}
+
+async function toggleModalGalleryPublish() {
+  const btn = document.getElementById('modalGalleryBtn');
+  if (!window._modalPromptId || !btn) return;
+  const newState = await toggleGalleryPublish(window._modalPromptId, !window._modalPromptPublic, btn, false);
+  if (newState !== null) window._modalPromptPublic = newState;
 }
 
 // ===== Load session (replay from DB) =====
