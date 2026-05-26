@@ -90,40 +90,118 @@
   },
 
   "round1_preset_vague": {
-    "intro": "开发项目——先画清楚用户流，技术选型才有意义。",
+    "intro": "开发需求先不急着选技术栈。把用户第一条核心路径、MVP边界、落地方式和最怕的坑说清楚，技术方案才不会跑偏。",
     "questions": [
       {
-        "question": "这个产品一句话描述是什么？用户用它解决什么问题？",
+        "question": "用户打开这个产品后，最核心的一件事是什么？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：一个让团队管理任务的工具，像简化版的Jira...",
+        "text_placeholder": "比如：上传文件得到总结、创建任务并分配给队友、输入网址开始监控、生成一张图片...",
         "options": [
-          {"label": "SaaS工具", "description": "像Notion/Linear/Figma——用户注册登录、有工作空间、按月付费"},
-          {"label": "电商/交易平台", "description": "像淘宝/Stripe——有商品、购物车、支付、订单流程"},
-          {"label": "社交/内容平台", "description": "像小红书/Twitter——用户发内容、关注、互动、有Feed流"},
-          {"label": "管理后台/Dashboard", "description": "像Grafana/Admin面板——数据可视化、表格、筛选、导出"},
-          {"label": "API/自动化服务", "description": "像Zapier/后端服务——没有用户界面，纯API或定时任务"},
-          {"label": "其他 / 让我自己描述", "description": "你的项目类型不在上面"}
+          {
+            "label": "创建/管理东西",
+            "value": "用户主要是在创建、编辑、管理任务、项目、客户、库存、内容等数据",
+            "description": "适合SaaS、CRM、后台、协作工具"
+          },
+          {
+            "label": "生成/处理内容",
+            "value": "用户输入文本、图片、文件或参数，系统生成结果、分析报告或自动化输出",
+            "description": "适合AI工具、文件处理、内容工具"
+          },
+          {
+            "label": "浏览/匹配/交易",
+            "value": "用户查找、筛选、比较、下单、预约、支付或与别人匹配",
+            "description": "适合电商、平台、Marketplace"
+          },
+          {
+            "label": "监控/自动化",
+            "value": "系统定时抓取、检查、提醒、同步或调用API，用户主要看状态和结果",
+            "description": "适合Dashboard、API服务、自动化脚本"
+          }
         ]
       },
       {
-        "question": "有没有参考产品？'像XX的XX'最能帮我理解你要什么。",
+        "question": "MVP第一版做到什么程度就可以给人试？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：像Notion的文档管理 + Linear的项目跟踪，但更简单...",
-        "options": []
+        "text_placeholder": "可以写你现在最想先做出来的3个功能，别担心不完整。",
+        "options": [
+          {
+            "label": "单一核心流程",
+            "value": "只做一条从输入到结果的闭环，先不做复杂账号、团队、支付",
+            "description": "最快验证想法"
+          },
+          {
+            "label": "账号+个人空间",
+            "value": "需要登录、保存历史、个人数据隔离，用户回来能继续用",
+            "description": "适合真实试用和长期使用"
+          },
+          {
+            "label": "团队/权限",
+            "value": "需要多人协作、角色权限、共享、审批或工作空间",
+            "description": "适合B2B/组织场景"
+          },
+          {
+            "label": "付费/额度",
+            "value": "需要订阅、额度、免费/Pro区分、支付成功后的权限变化",
+            "description": "适合准备变现"
+          }
+        ]
       },
       {
-        "question": "你的技术背景是什么？这决定了方案的复杂度上限。",
+        "question": "你希望技术方案怎么落地？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：熟悉React和Node.js，用过PostgreSQL...",
+        "text_placeholder": "比如：你熟React还是Python？想部署到Railway/Vercel/Supabase？或者希望我直接决定。",
         "options": [
-          {"label": "全栈开发者", "description": "前后端都能写，熟悉至少一个完整技术栈，能自己部署"},
-          {"label": "前端为主", "description": "React/Vue很熟，后端需要简单方案（Supabase/Firebase/Next.js API）"},
-          {"label": "后端为主", "description": "Python/Go/Java很熟，前端需要简单方案或模板"},
-          {"label": "非技术/学习中", "description": "需要最简单的方案，最好是低代码或一个框架搞定所有"},
-          {"label": "其他 / 让我自己描述", "description": "你的情况比较特殊"}
+          {
+            "label": "最简单能跑",
+            "value": "优先一个框架、一个数据库、少依赖，能本地运行也能快速部署",
+            "description": "适合朋友试用/MVP"
+          },
+          {
+            "label": "前后端分清",
+            "value": "前端、API、数据库边界清楚，后面好扩展、好接入第三方",
+            "description": "适合认真长期做"
+          },
+          {
+            "label": "我有固定技术栈",
+            "value": "按我熟悉的React/Vue/Python/Node/Go等技术栈来，不要引入陌生工具",
+            "description": "适合有开发偏好"
+          },
+          {
+            "label": "你来做架构判断",
+            "value": "我只关心产品效果，技术栈由你按成本、速度、可维护性决定",
+            "description": "适合非技术或想省心"
+          }
+        ]
+      },
+      {
+        "question": "你最不能接受哪类开发结果？",
+        "multi_select": false,
+        "allow_text": true,
+        "text_placeholder": "比如：UI很丑、部署麻烦、代码复杂到看不懂、数据会丢、后面不好收费...",
+        "options": [
+          {
+            "label": "过度架构",
+            "value": "不要微服务、复杂抽象、过早优化，MVP阶段代码要直接好懂",
+            "description": "避免做太重"
+          },
+          {
+            "label": "无法上线",
+            "value": "不要只给伪代码或本地玩具，必须能部署、配置环境变量、给朋友打开用",
+            "description": "避免落地失败"
+          },
+          {
+            "label": "体验粗糙",
+            "value": "不要只实现功能，界面状态、错误提示、空状态、加载状态都要能用",
+            "description": "避免朋友一试就卡"
+          },
+          {
+            "label": "数据/安全不稳",
+            "value": "不要把用户数据混在一起、私密内容暴露、缺少校验或错误处理",
+            "description": "避免真实试用风险"
+          }
         ]
       }
     ]

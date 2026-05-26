@@ -1087,7 +1087,7 @@ async def chat(request: Request):
             if preset:
                 # Use preset questions directly — skip API call for much better quality
                 preset_data = {
-                    "intro": preset["intro"],
+                    "intro": preset.get("intro") or "我先问几个关键问题，把你脑子里的画面具体化。",
                     "questions": preset["questions"],
                     "summary": "",
                     "prompt_ready": False,

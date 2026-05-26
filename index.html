@@ -741,6 +741,13 @@ function useSuggestion(cat) {
 
 // ===== Utilities =====
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function attr(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 function scrollBottom() { setTimeout(() => chatArea.scrollTop = chatArea.scrollHeight, 50); }
 
 // ===== Markdown renderer (lightweight) =====
@@ -918,7 +925,8 @@ function addAiRound(data) {
       (q.options || []).forEach((opt, oi) => {
         const label = typeof opt === 'string' ? opt : (opt.label || String(opt));
         const desc = typeof opt === 'object' && opt !== null ? (opt.description || '') : '';
-        html += `<div class="q-opt" data-qi="${qi}" data-oi="${oi}" data-multi="${multi}" onclick="selectOpt(this,'${roundId}')">
+        const answerText = typeof opt === 'object' && opt !== null ? (opt.value || opt.description || label) : label;
+        html += `<div class="q-opt" data-qi="${qi}" data-oi="${oi}" data-multi="${multi}" data-answer="${attr(answerText)}" onclick="selectOpt(this,'${roundId}')">
           <div class="opt-label">${esc(label)}</div>
           ${desc ? '<div class="opt-desc">' + esc(desc) + '</div>' : ''}
         </div>`;
@@ -989,7 +997,7 @@ async function submitAnswers(roundId) {
     const detailInput = card.querySelector('.detail-input');
     const customInput = card.querySelector('.custom-input');
 
-    let answer = selectedOpts.map(o => o.querySelector('.opt-label')?.textContent || o.textContent).join(', ');
+    let answer = selectedOpts.map(o => o.dataset.answer || o.querySelector('.opt-label')?.textContent || o.textContent).join(', ');
     const extraText = (detailInput && detailInput.value.trim()) || (customInput && customInput.value.trim()) || '';
     if (extraText) answer = answer ? answer + ' | Additional details: ' + extraText : extraText;
     answers.push(qLabel + '\n→ ' + (answer || '(no answer)'));

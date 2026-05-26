@@ -100,41 +100,118 @@
   },
 
   "round1_preset_vague": {
-    "intro": "短视频——先确定核心：你要讲什么故事？",
+    "intro": "视频先按导演思路来：开头1秒怎么抓人、镜头像哪类片子、结尾留下什么、哪些AI视频问题必须避开。",
     "questions": [
       {
-        "question": "这个视频的灵魂是什么？",
+        "question": "这个视频开头1秒，观众先看到什么才会停下来？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：一个孤独机器人在末日城市打高尔夫...",
+        "text_placeholder": "比如：一只机械手从水里伸出来、一个App界面瞬间完成任务、空城街道上只有一盏灯亮着...",
         "options": [
-          {"label": "产品展示", "description": "像Apple发布会——产品从黑暗中旋转出现，每个细节特写，节奏精准"},
-          {"label": "故事叙事", "description": "像Pixar短片——用画面讲一个有开头、转折、结尾的完整故事"},
-          {"label": "知识科普", "description": "像Kurzgesagt——复杂概念用动画可视化，信息密度高但看起来轻松"},
-          {"label": "艺术短片", "description": "像MV或实验影像——不讲故事，用纯粹的视觉和音乐制造情绪"},
-          {"label": "搞笑段子", "description": "像抖音热门——前3秒抓住注意力，靠反转或荒诞让人笑出来"},
-          {"label": "其他 / 让我自己描述", "description": "你有更具体的想法"}
+          {
+            "label": "强画面钩子",
+            "value": "第一帧就是一个异常或高冲击画面，比如空城中央的主角、会发光的产品、反常识场景",
+            "description": "适合短视频、广告、社媒传播"
+          },
+          {
+            "label": "人物动作",
+            "value": "从一个具体动作开始，比如推门、回头、奔跑、手指触碰某个物件",
+            "description": "适合故事、角色、情绪片"
+          },
+          {
+            "label": "产品/结果展示",
+            "value": "先让观众看到产品、效果或变化前后对比，不绕弯",
+            "description": "适合商业视频、App展示、卖点视频"
+          },
+          {
+            "label": "氛围慢进入",
+            "value": "从环境、光线或声音慢慢进入，像电影片头一样建立世界",
+            "description": "适合艺术短片、预告片、世界观视频"
+          }
         ]
       },
       {
-        "question": "你脑海里有没有已经成形的画面？",
+        "question": "这个视频更像哪种导演方式？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "描述你看到的画面：场景、角色、动作、氛围... 越具体越好",
-        "options": []
+        "text_placeholder": "可以补充你脑子里的参考：像Apple广告、A24预告片、纪录片镜头、MV视觉片...",
+        "options": [
+          {
+            "label": "电影预告片",
+            "value": "镜头有推进、反差和高潮，画面每一秒都服务于戏剧张力",
+            "description": "适合叙事、科幻、奇幻、人物故事"
+          },
+          {
+            "label": "高级广告片",
+            "value": "干净、精准、产品或品牌气质很强，运动和光线都很克制",
+            "description": "适合产品、品牌、商业展示"
+          },
+          {
+            "label": "纪录片观察",
+            "value": "像真实摄像机记录现场，动作自然，镜头不过度炫技",
+            "description": "适合生活方式、纪实感、真实人物"
+          },
+          {
+            "label": "音乐视觉片",
+            "value": "节奏、色彩、剪辑和情绪比故事更重要，像MV或视觉实验",
+            "description": "适合氛围、潮流、抽象视觉"
+          }
+        ]
       },
       {
-        "question": "你希望观众看完后是什么状态？",
-        "multi_select": true,
+        "question": "结尾留给观众的状态是什么？",
+        "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：安静地思考、忍不住转发、想看续集...",
+        "text_placeholder": "比如：想点链接、想看下一集、心里安静一下、记住一个产品卖点...",
         "options": [
-          {"label": "感动", "description": "像Pixar《UP》开头——不说一句话，用画面让人安静流泪"},
-          {"label": "幽默", "description": "像韦斯·安德森电影——不是哈哈大笑，是会心一笑的高级感"},
-          {"label": "震撼", "description": "像《星际穿越》对接戏——屏住呼吸，看完需要缓一缓"},
-          {"label": "治愈", "description": "像宫崎骏的夏天——温暖、舒服、想在那个世界里待一会儿"},
-          {"label": "好奇", "description": "像诺兰电影开头——看不懂但停不下来，一定要知道后面发生什么"},
-          {"label": "其他 / 让我自己描述", "description": "你想要的感觉不在上面"}
+          {
+            "label": "想立刻行动",
+            "value": "结尾清楚指向购买、点击、报名、关注或试用",
+            "description": "适合广告和产品视频"
+          },
+          {
+            "label": "想继续看",
+            "value": "结尾留一个悬念或反转，让人想知道下一段发生什么",
+            "description": "适合系列内容和故事短片"
+          },
+          {
+            "label": "被情绪击中",
+            "value": "结尾不是解释，而是一个画面或声音让人安静几秒",
+            "description": "适合艺术片、品牌片、情绪片"
+          },
+          {
+            "label": "记住一个卖点",
+            "value": "结尾强化一个非常具体的功能、结果或差异点",
+            "description": "适合SaaS、App、硬件、服务展示"
+          }
+        ]
+      },
+      {
+        "question": "AI视频里你最不能接受哪类问题？",
+        "multi_select": false,
+        "allow_text": true,
+        "text_placeholder": "比如：角色脸会变、走路像飘、镜头乱跳、产品形状一秒一变...",
+        "options": [
+          {
+            "label": "脸/身体闪烁",
+            "value": "重点避免脸部变形、手指异常、角色身份漂移、身体结构忽大忽小",
+            "description": "有人物时必须控制"
+          },
+          {
+            "label": "物理不可信",
+            "value": "重点避免走路漂浮、物体穿模、重力错误、运动轨迹不自然",
+            "description": "动作/产品/车辆类重要"
+          },
+          {
+            "label": "镜头乱跳",
+            "value": "重点保持镜头连续，不突然换景、不丢主体、不莫名其妙缩放",
+            "description": "故事和广告都很关键"
+          },
+          {
+            "label": "质感太AI",
+            "value": "避免过度锐化、油腻光泽、无意义细节和过饱和滤镜感",
+            "description": "想要真实高级时选这个"
+          }
         ]
       }
     ]

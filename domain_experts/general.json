@@ -42,38 +42,123 @@
   },
 
   "round1_preset_vague": {
-    "intro": "先搞清楚一件事：你最终想要的是什么形式的东西？",
+    "intro": "先把方向找准：你最终要交给AI生成什么、脑子里最清楚的碎片是什么、成功标准是什么。",
     "questions": [
       {
-        "question": "你想要AI帮你生成什么？",
+        "question": "你最终想让AI产出哪一种东西？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：一张赛博朋克风格的图、一篇小红书种草文、一个Web应用...",
+        "text_placeholder": "比如：一张海报图、一段小红书文案、一个网页、一个视频脚本，或者你还说不清也可以写出来。",
         "options": [
-          {"label": "一张图片", "description": "AI绘画/插画/概念图/产品图——给Midjourney/DALL-E/SD用的专业prompt"},
-          {"label": "一段文字", "description": "文案/文章/脚本/邮件——从标题到CTA的完整写作brief"},
-          {"label": "一个应用/网站", "description": "Web应用/App/工具——从用户流到技术架构的完整开发spec"},
-          {"label": "一段视频", "description": "短片/动画/广告——逐镜头分镜+声音设计的完整视频brief"},
-          {"label": "一个设计", "description": "Logo/UI/海报/包装——从品牌DNA到像素级执行的设计brief"}
+          {
+            "label": "图片/视觉",
+            "value": "生成AI绘画、插画、海报、产品图、头像或概念图的专业prompt",
+            "description": "先锁定画面、风格、光线和负面提示"
+          },
+          {
+            "label": "文案/文字",
+            "value": "生成文章、广告、脚本、邮件、社媒帖子或品牌文案的写作brief",
+            "description": "先锁定读者、平台、语气和CTA"
+          },
+          {
+            "label": "应用/代码",
+            "value": "生成网站、App、工具、自动化脚本或技术方案的开发spec",
+            "description": "先锁定用户流、MVP范围和技术约束"
+          },
+          {
+            "label": "视频/分镜",
+            "value": "生成短片、广告、动画、MV或镜头脚本的视频brief",
+            "description": "先锁定开头钩子、镜头、节奏和声音"
+          },
+          {
+            "label": "品牌/设计",
+            "value": "生成Logo、UI、包装、PPT或视觉系统的设计brief",
+            "description": "先锁定品牌人格、识别锚点和使用场景"
+          }
         ]
       },
       {
-        "question": "你脑海里已经有什么具体的想法了吗？",
+        "question": "你脑海里已经最清楚的碎片是什么？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "把你想到的所有东西都说出来——越具体越好，哪怕是零散的片段...",
-        "options": []
+        "text_placeholder": "把零散片段写下来也行：一个颜色、一句话、一个动作、一个页面、一个情绪。",
+        "options": [
+          {
+            "label": "一个画面",
+            "value": "我已经能看到某个场景、人物、产品、界面或构图，只是还说不完整",
+            "description": "适合视觉/视频/设计需求"
+          },
+          {
+            "label": "一句话/观点",
+            "value": "我有一句核心表达、卖点、标题或观点，想把它展开成完整内容",
+            "description": "适合文案/文章/品牌叙事"
+          },
+          {
+            "label": "一个流程",
+            "value": "我知道用户要怎么操作、看到什么结果，但还没整理成完整方案",
+            "description": "适合应用/代码/工具需求"
+          },
+          {
+            "label": "一种感觉",
+            "value": "我说不清具体内容，但清楚它应该让人感到高级、治愈、压迫、兴奋或可信",
+            "description": "适合还在找方向的创意需求"
+          }
+        ]
       },
       {
-        "question": "有没有参考？'像XX但不要XX'最能帮我理解你要什么。",
-        "multi_select": true,
+        "question": "什么样的结果会让你觉得‘对，就是这个’？",
+        "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：像Apple官网的简洁但不要那么冷、像杜蕾斯文案的有趣但不要那么露骨...",
+        "text_placeholder": "比如：朋友一看就懂、能直接复制给AI用、像某个品牌但更年轻、能马上拿去开发...",
         "options": [
-          {"label": "Apple式极简", "description": "干净、克制、每个细节都精确到像素——少即是多"},
-          {"label": "Pixar式温暖", "description": "有故事、有温度、让人又笑又哭——用细节打动人心"},
-          {"label": "赛博朋克/未来感", "description": "霓虹、科技、暗色调——银翼杀手/攻壳机动队/赛博朋克2077的世界"},
-          {"label": "宫崎骏式治愈", "description": "自然、清新、温暖——让人想在那个世界里住一辈子"}
+          {
+            "label": "可直接使用",
+            "value": "结果要完整、清楚、少废话，最好复制给另一个AI或工具就能开干",
+            "description": "重视可执行性"
+          },
+          {
+            "label": "很有画面感",
+            "value": "结果要把我脑子里的感觉说出来，细节足够具体到能想象",
+            "description": "重视想象力和表达"
+          },
+          {
+            "label": "专业可信",
+            "value": "结果要像专家brief，有结构、有判断、有边界，不像随便聊天",
+            "description": "重视质量和准确度"
+          },
+          {
+            "label": "有传播力",
+            "value": "结果要让人想点、想看、想分享、想试，不只是正确",
+            "description": "重视吸引力和转化"
+          }
+        ]
+      },
+      {
+        "question": "哪种结果会让你觉得‘完全不是我要的’？",
+        "multi_select": false,
+        "allow_text": true,
+        "text_placeholder": "比如：太泛、太复杂、太像模板、太AI味、太商业、太幼稚...",
+        "options": [
+          {
+            "label": "太泛太空",
+            "value": "不要大词和套话，要具体到画面、动作、字段、镜头或句子",
+            "description": "避免万能答案"
+          },
+          {
+            "label": "太复杂",
+            "value": "不要把简单需求做成大型方案，保留MVP和最关键部分",
+            "description": "避免过度设计"
+          },
+          {
+            "label": "太模板",
+            "value": "不要像AI默认回答或素材网站模板，要有独特判断和细节",
+            "description": "避免同质化"
+          },
+          {
+            "label": "语气不对",
+            "value": "不要过冷、过吵、过幼稚、过商业，整体气质要贴近我脑子里的感觉",
+            "description": "避免风格跑偏"
+          }
         ]
       }
     ]

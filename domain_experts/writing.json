@@ -90,40 +90,118 @@
   },
 
   "round1_preset_vague": {
-    "intro": "文案写作——平台决定DNA，先确定战场。",
+    "intro": "文案先看读者当下状态。谁在什么心情下读到它，比‘写得高级一点’重要得多。",
     "questions": [
       {
-        "question": "这个文案活在哪个生态里？",
+        "question": "读者看到这段文案的那一刻，处在什么状态？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "不同平台有完全不同的写法...",
+        "text_placeholder": "比如：深夜焦虑地搜解决方案、午休随手刷到、老板转来让他快速判断...",
         "options": [
-          {"label": "小红书种草", "description": "核心是真实感+好奇心缺口——标题制造悬念，正文像朋友分享，emoji是视觉断点"},
-          {"label": "公众号文章", "description": "核心是深度+金句密度——需要节奏感，每段都有值得划线的句子"},
-          {"label": "抖音/短视频脚本", "description": "前3秒决定生死——需要视觉化语言，每句话都要能变成画面"},
-          {"label": "Landing Page", "description": "F型扫读——每屏一个说服点，标题抓注意力，按钮文案决定转化率"},
-          {"label": "邮件营销", "description": "Subject line决定打开率——正文要在30秒内给价值，CTA只能有一个"},
-          {"label": "其他 / 让我自己描述", "description": "你的文案场景不在上面"}
+          {
+            "label": "随手刷到",
+            "value": "读者在社媒信息流里快速滑动，前2秒必须抓住注意力",
+            "description": "适合小红书、抖音、Instagram、TikTok"
+          },
+          {
+            "label": "带着问题搜索",
+            "value": "读者已经有明确痛点，正在找答案、方法或推荐",
+            "description": "适合SEO文章、产品页、教程、测评"
+          },
+          {
+            "label": "准备做决定",
+            "value": "读者正在比较方案，关心可信度、差异点、价格和风险",
+            "description": "适合Landing Page、销售页、邮件营销"
+          },
+          {
+            "label": "被动接收",
+            "value": "读者没主动需求，需要文案先建立兴趣和相关性",
+            "description": "适合广告、品牌文案、冷启动内容"
+          }
         ]
       },
       {
-        "question": "如果读者看完只记住一句话，那句话是什么？",
+        "question": "如果读者只记住一句话，你希望那句话在他脑子里怎么回响？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "不是产品功能，是读者的感受或行动。比如：'原来写作可以这么快'...",
-        "options": []
+        "text_placeholder": "可以直接写那句话的草稿；哪怕很粗糙也有用。",
+        "options": [
+          {
+            "label": "终于懂了",
+            "value": "一句话把复杂东西讲透，让读者有‘原来如此’的清晰感",
+            "description": "适合解释产品、观点文章、教育内容"
+          },
+          {
+            "label": "这说的是我",
+            "value": "一句话准确戳中读者处境，让他觉得你真的理解他",
+            "description": "适合痛点文案、种草、个人品牌"
+          },
+          {
+            "label": "我想试试",
+            "value": "一句话把行动收益说清楚，让读者愿意点击、购买、预约或报名",
+            "description": "适合转化文案和广告"
+          },
+          {
+            "label": "这品牌有感觉",
+            "value": "一句话留下独特气质，不一定解释完整，但让人记住调性",
+            "description": "适合品牌Slogan、海报、发布文案"
+          }
+        ]
       },
       {
-        "question": "这个文案的声音像谁？",
+        "question": "这个文案的声音更像谁在说话？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "给一个你觉得'语气完全对了'的参考...",
+        "text_placeholder": "比如：像一个懂行朋友，不像品牌官号；像Apple官网但更有人味...",
         "options": [
-          {"label": "苹果官网的克制", "description": "每个字都经过筛选，用沉默制造高级感，少即是多"},
-          {"label": "杜蕾斯的暧昧", "description": "聪明、有双关、让人会心一笑，看完想截图分享"},
-          {"label": "罗永浩的真诚", "description": "大白话说洞察，真诚到近乎笨拙，但你就是相信他"},
-          {"label": "少数派的理性", "description": "数据+逻辑+亲身体验，不煽情但让人信服"},
-          {"label": "其他 / 让我自己描述", "description": "你想要的语气不在上面"}
+          {
+            "label": "聪明朋友",
+            "value": "像懂行的朋友给你讲重点，口语、直接、有洞察但不装",
+            "description": "适合社媒、个人IP、轻量产品"
+          },
+          {
+            "label": "克制品牌",
+            "value": "像Apple/Aesop那类少说但精准，用留白和节奏制造高级感",
+            "description": "适合高端品牌、官网、发布页"
+          },
+          {
+            "label": "犀利专家",
+            "value": "像顾问或行业专家，指出问题、给判断、建立权威",
+            "description": "适合B2B、专业服务、长文"
+          },
+          {
+            "label": "有趣编剧",
+            "value": "像会写段子的创意人，用反差、节奏和画面感让人愿意看完",
+            "description": "适合短视频脚本、广告、热点内容"
+          }
+        ]
+      },
+      {
+        "question": "你最不想要哪种文案味道？",
+        "multi_select": false,
+        "allow_text": true,
+        "text_placeholder": "比如：不要‘赋能闭环’，不要喊麦，不要像新闻稿，不要万能广告句...",
+        "options": [
+          {
+            "label": "互联网黑话",
+            "value": "避免赋能、抓手、闭环、颗粒度、链路等空泛表达",
+            "description": "想要人话和清晰时选这个"
+          },
+          {
+            "label": "过度鸡血",
+            "value": "避免全是感叹号、夸张承诺、强行煽动和廉价兴奋",
+            "description": "想要可信和克制时选这个"
+          },
+          {
+            "label": "新闻通稿",
+            "value": "避免‘据悉/近日/业内领先’这种没有温度的官方口吻",
+            "description": "想要真实、有个性时选这个"
+          },
+          {
+            "label": "万能废话",
+            "value": "避免品质生活、为你而生、重新定义、开启未来这类可替换句子",
+            "description": "想要具体和有记忆点时选这个"
+          }
         ]
       }
     ]

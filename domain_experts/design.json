@@ -89,47 +89,118 @@
   },
 
   "round1_preset_vague": {
-    "intro": "Logo设计——最关键的第一步：品牌的性格是什么？",
+    "intro": "设计先别从颜色开始。真正决定成败的是品牌人格、识别锚点、禁区和它会出现在哪些真实场景里。",
     "questions": [
       {
-        "question": "这个logo是给什么品牌/产品的？",
+        "question": "这个品牌被人第一眼看到时，应该像哪种人走进房间？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：一个AI写作工具、一家精品咖啡店、个人品牌...",
+        "text_placeholder": "比如：穿黑T的年轻CTO、很会照顾人的咖啡店老板、安静但很贵的精品店...",
         "options": [
-          {"label": "科技/互联网", "description": "像Stripe/Notion那样——干净、现代、让人觉得'这个团队很专业'"},
-          {"label": "餐饮/食品", "description": "像Blue Bottle Coffee——温暖、有手作感、让人想走进去坐一下"},
-          {"label": "时尚/生活", "description": "像Aesop——克制、高级、不说话就让你知道它不便宜"},
-          {"label": "教育/知识", "description": "像Duolingo——友好、有趣、让学习看起来不那么可怕"},
-          {"label": "个人品牌", "description": "像设计师/自媒体/独立开发者的个人标识，需要有辨识度"},
-          {"label": "其他 / 让我自己描述", "description": "你的品牌不在上面的分类里"}
+          {
+            "label": "冷静专业",
+            "value": "像Stripe/IBM那类可信、理性、干净的专业感，让人觉得稳",
+            "description": "适合B2B、金融、工具、科技服务"
+          },
+          {
+            "label": "亲近聪明",
+            "value": "像Duolingo/Notion那类友好、有脑子但不端着的感觉",
+            "description": "适合教育、效率工具、社区产品"
+          },
+          {
+            "label": "高级克制",
+            "value": "像Aesop/Apple那类少、准、安静，有价格感和审美门槛",
+            "description": "适合时尚、生活方式、高端服务"
+          },
+          {
+            "label": "大胆有锋芒",
+            "value": "像Nike/Red Bull那类有速度、能量、攻击性或年轻感",
+            "description": "适合运动、娱乐、潮流、创意品牌"
+          }
         ]
       },
       {
-        "question": "如果这个品牌是一个人走进房间，别人对他的第一印象是什么？",
+        "question": "Logo最值得被记住的识别锚点是什么？",
         "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：穿黑色T恤的年轻CTO，说话直接但友善...",
+        "text_placeholder": "如果你已有品牌名/字母/符号想法，可以直接写；没有也没关系。",
         "options": [
-          {"label": "权威商务精英", "description": "像McKinsey——深色西装、精准、让人不敢质疑的专业感"},
-          {"label": "亲切邻家朋友", "description": "像宜家——笑容温暖、平易近人、让人放松的信任感"},
-          {"label": "叛逆艺术家", "description": "像Supreme——不在乎你怎么想、有态度、酷到骨子里"},
-          {"label": "沉稳技术学者", "description": "像MIT——不张扬但实力深厚、理性、值得信赖"},
-          {"label": "活力创新者", "description": "像Spotify——充满能量、年轻、总在尝试新东西"},
-          {"label": "其他 / 让我自己描述", "description": "你想到的气质不在上面"}
+          {
+            "label": "一个符号",
+            "value": "有独立图形标记，小尺寸也能认出来，像Nike swoosh或Apple轮廓",
+            "description": "适合App图标/头像/印章"
+          },
+          {
+            "label": "一组字母",
+            "value": "品牌名或首字母本身就是重点，靠字体结构和字距建立记忆点",
+            "description": "适合英文名、个人品牌、专业机构"
+          },
+          {
+            "label": "一个隐喻",
+            "value": "图形背后有概念，比如连接、成长、速度、保护、洞察，但不要画得太直白",
+            "description": "适合想讲品牌故事的项目"
+          },
+          {
+            "label": "一种系统感",
+            "value": "不只一个Logo，而是一套能延展到网站、名片、社媒、包装的视觉语言",
+            "description": "适合准备长期做品牌的人"
+          }
         ]
       },
       {
-        "question": "有没有你觉得'气质对了'的logo参考？",
-        "multi_select": true,
+        "question": "哪种设计方向你明确不想要？",
+        "multi_select": false,
         "allow_text": true,
-        "text_placeholder": "比如：喜欢Apple的极简但不喜欢它的冷淡，喜欢可口可乐的经典但不喜欢它的老气...",
+        "text_placeholder": "比如：不要AI模板感、不要太可爱、不要太公司PPT、不要复杂到小尺寸看不清...",
         "options": [
-          {"label": "Apple式极简", "description": "一个符号说明一切，没有多余的笔画，3米外也能认出来"},
-          {"label": "Google式友好", "description": "圆润、多彩、让人觉得这个品牌很好接近"},
-          {"label": "Nike式力量", "description": "一笔swoosh——简单、锋利、充满动感和野心"},
-          {"label": "Chanel式经典", "description": "字母交织、对称、一百年后看起来还是高级的"},
-          {"label": "其他 / 让我自己描述", "description": "你喜欢的风格不在上面"}
+          {
+            "label": "模板感",
+            "value": "不要像Canva模板或廉价AI logo，避免通用图标、渐变球、无意义线条",
+            "description": "想要原创和可信时选这个"
+          },
+          {
+            "label": "太幼稚",
+            "value": "不要过度可爱、圆润、卡通，避免让品牌显得不专业",
+            "description": "B2B/高端/专业服务常见禁区"
+          },
+          {
+            "label": "太冰冷",
+            "value": "不要只有科技蓝和几何线条，避免没有人味、像企业PPT封面",
+            "description": "消费者品牌/社区产品常见禁区"
+          },
+          {
+            "label": "太复杂",
+            "value": "不要细节堆太多，小尺寸、黑白印刷、头像裁切时要能活下来",
+            "description": "实际落地最重要"
+          }
+        ]
+      },
+      {
+        "question": "这个设计最常出现在哪个真实场景？",
+        "multi_select": false,
+        "allow_text": true,
+        "text_placeholder": "比如：网站左上角、App图标、名片、包装贴纸、Pitch Deck首页...",
+        "options": [
+          {
+            "label": "App/网站",
+            "value": "主要在favicon、App图标、导航栏和登录页出现，需要小尺寸清楚",
+            "description": "数字产品优先"
+          },
+          {
+            "label": "社媒头像/封面",
+            "value": "主要在Instagram、小红书、TikTok、X等平台出现，要一眼有辨识度",
+            "description": "内容品牌/个人品牌优先"
+          },
+          {
+            "label": "包装/实体物料",
+            "value": "会印在包装、贴纸、门头、名片或衣服上，要考虑黑白和材质",
+            "description": "实体品牌优先"
+          },
+          {
+            "label": "融资/商务材料",
+            "value": "会出现在Pitch Deck、官网、邮件签名和合同里，需要可信和成熟",
+            "description": "创业项目/B2B优先"
+          }
         ]
       }
     ]
