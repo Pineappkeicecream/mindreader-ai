@@ -532,6 +532,103 @@ async def index():
     return HTMLResponse(html_path.read_text(encoding="utf-8"))
 
 
+@app.get("/prompt/{prompt_id}", response_class=HTMLResponse)
+async def shared_prompt_page(prompt_id: int):
+    """Shareable prompt page — standalone HTML with the prompt content."""
+    prompt = database.get_prompt(prompt_id)
+    if not prompt:
+        return HTMLResponse("<h1>Prompt not found</h1>", status_code=404)
+
+    # Escape for safe HTML embedding
+    import html as html_mod
+    safe_summary = html_mod.escape(prompt.get("summary", "") or "")
+    safe_domain = html_mod.escape(prompt.get("domain", "general"))
+
+    # Convert markdown to basic HTML for the prompt
+    fp = prompt.get("final_prompt", "")
+    safe_fp = html_mod.escape(fp)
+    # Basic markdown rendering in the template via JS
+
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindReader AI Prompt #{prompt_id}</title>
+<meta name="description" content="{safe_summary[:160]}">
+<meta property="og:title" content="MindReader AI Prompt #{prompt_id} — {safe_domain}">
+<meta property="og:description" content="{safe_summary[:200]}">
+<meta property="og:url" content="https://web-production-3e4e9.up.railway.app/prompt/{prompt_id}">
+<meta name="theme-color" content="#4F46E5">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F46E5'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23C7D2FE' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23E0E7FF'/%3E%3C/svg%3E">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{{font-family:'Inter',sans-serif}}
+body{{margin:0;background:#09090b;color:#fafafa;min-height:100vh}}
+.prompt-rendered h2{{font-size:16px;font-weight:700;color:#a5b4fc;margin:24px 0 10px 0;padding-bottom:6px;border-bottom:1px solid #1e2d4a}}
+.prompt-rendered h2:first-child{{margin-top:0}}
+.prompt-rendered h3{{font-size:14px;font-weight:600;color:#c7d2fe;margin:16px 0 8px 0}}
+.prompt-rendered p{{margin:8px 0;color:#d4d4d8}}
+.prompt-rendered ul{{margin:8px 0;padding-left:20px;color:#d4d4d8}}
+.prompt-rendered li{{margin:4px 0;line-height:1.6}}
+.prompt-rendered strong{{color:#e0e7ff;font-weight:600}}
+.prompt-rendered em{{color:#a5b4fc;font-style:italic}}
+</style>
+</head>
+<body>
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/" class="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300">
+      <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#4F46E5"/>
+        <circle cx="16" cy="16" r="2.5" fill="#E0E7FF"/>
+      </svg>
+      MindReader AI
+    </a>
+    <span class="text-zinc-600">·</span>
+    <span class="text-xs font-semibold text-zinc-500 uppercase">{safe_domain}</span>
+    <span class="text-zinc-600">·</span>
+    <span class="text-xs text-zinc-600">{prompt.get('char_count', 0):,} chars</span>
+  </div>
+
+  {"<div class='bg-[#0f0d1a] border border-[#312e81] rounded-xl p-4 mb-4'><div class='text-xs font-semibold text-indigo-400 mb-2'>What I understood</div><div class='text-sm text-[#c7d2fe] leading-relaxed'>" + safe_summary + "</div></div>" if safe_summary else ""}
+
+  <div class="bg-[#080f1a] border border-[#1a3a5c] rounded-xl p-5">
+    <div class="prompt-rendered" id="promptContent"></div>
+  </div>
+
+  <div class="flex gap-3 mt-4">
+    <button onclick="copyPrompt()" id="copyBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-semibold transition">Copy Prompt</button>
+    <a href="/" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">Create Your Own</a>
+  </div>
+</div>
+<script>
+const rawPrompt = {json.dumps(fp)};
+function renderMd(t) {{
+  let h = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  h = h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  h = h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  h = h.replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>');
+  h = h.replace(/^- (.+)$/gm,'<li>$1</li>');
+  h = h.replace(/(<li>.*<\\/li>\\n?)+/g,'<ul>$&</ul>');
+  h = h.replace(/\\n\\n/g,'</p><p>');
+  return '<p>'+h+'</p>';
+}}
+document.getElementById('promptContent').innerHTML = renderMd(rawPrompt);
+function copyPrompt() {{
+  navigator.clipboard.writeText(rawPrompt).then(()=>{{
+    const b = document.getElementById('copyBtn');
+    b.textContent = 'Copied!';
+    b.classList.replace('bg-indigo-600','bg-emerald-600');
+    setTimeout(()=>{{ b.textContent='Copy Prompt'; b.classList.replace('bg-emerald-600','bg-indigo-600'); }}, 2000);
+  }});
+}}
+</script>
+</body></html>""")
+
+
+
 @app.get("/health")
 async def health():
     """Health check endpoint for monitoring."""

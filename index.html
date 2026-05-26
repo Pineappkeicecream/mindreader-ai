@@ -615,6 +615,7 @@ function addAiRound(data) {
         <button class="export-btn" onclick="copyForTool('${promptId}','chatgpt',this)">&#128172; ChatGPT</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','dalle',this)">&#127748; DALL-E</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','sd',this)">&#129302; Stable Diffusion</button>
+        ${data.prompt_id ? `<button class="export-btn" onclick="sharePrompt(${data.prompt_id},this)">&#128279; Share Link</button>` : ''}
       </div>
     </div>
     <button onclick="resetChat()" class="mt-4 text-sm text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1.5 font-medium">
@@ -844,6 +845,16 @@ async function copyForTool(promptId, tool, btn) {
     btn.innerHTML = '&#10004; Raw copied';
     setTimeout(() => { btn.innerHTML = btn.dataset.orig || btn.innerHTML; }, 2000);
   }
+}
+
+// ===== Share prompt =====
+function sharePrompt(promptId, btn) {
+  const url = `${location.origin}/prompt/${promptId}`;
+  navigator.clipboard.writeText(url).then(() => {
+    btn.innerHTML = '&#10004; Link copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerHTML = '&#128279; Share Link'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 // ===== Sidebar tabs =====
