@@ -300,11 +300,11 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
     </div>
 
     <!-- Gallery link -->
-    <a href="/gallery" class="block mx-3 mb-2 text-center text-[11px] text-indigo-400 hover:text-indigo-300 border border-zinc-800 hover:border-indigo-500/30 rounded-lg py-2 transition font-medium">&#10024; Prompt Gallery</a>
+    <a href="/gallery" id="galleryLink" class="block mx-3 mb-2 text-center text-[11px] text-indigo-400 hover:text-indigo-300 border border-zinc-800 hover:border-indigo-500/30 rounded-lg py-2 transition font-medium">&#10024; Prompt Gallery</a>
     <!-- Email subscribe -->
     <div class="px-3 mb-2" id="subscribeBox">
       <form onsubmit="subscribeEmail(event)" class="flex gap-1">
-        <input type="email" id="subEmail" placeholder="Get updates" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-white outline-none placeholder:text-zinc-700 focus:border-indigo-500 transition min-w-0">
+        <input type="email" id="subEmail" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-white outline-none placeholder:text-zinc-700 focus:border-indigo-500 transition min-w-0">
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-2 py-1.5 text-[10px] font-semibold transition flex-shrink-0" id="subBtn">&#10003;</button>
       </form>
     </div>
@@ -688,6 +688,12 @@ function applyI18n() {
   const pl1 = document.getElementById('pl1'); if (pl1 && !pl1.classList.contains('done')) pl1.textContent = t('understand');
   const pl2 = document.getElementById('pl2'); if (pl2 && !pl2.classList.contains('done')) pl2.textContent = t('deepDive');
   const pl3 = document.getElementById('pl3'); if (pl3 && !pl3.classList.contains('done')) pl3.textContent = t('generate');
+  // Gallery link
+  const gl = document.getElementById('galleryLink');
+  if (gl) gl.innerHTML = uiLang === 'zh' ? '&#10024; Prompt 画廊' : '&#10024; Prompt Gallery';
+  // Subscribe placeholder
+  const subEl = document.getElementById('subEmail');
+  if (subEl) subEl.placeholder = uiLang === 'zh' ? '输入邮箱获取更新' : 'Get updates';
   // Lang toggle active state
   document.querySelectorAll('.lang-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.lang === uiLang);
