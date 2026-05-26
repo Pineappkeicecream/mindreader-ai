@@ -706,7 +706,7 @@ async function submitAnswers(roundId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: currentSession, message: answers.join('\n\n'), model: currentModel }),
     });
-    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.error || `Server error ${res.status}`); }
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     turnCount = data.turn || turnCount + 1;
@@ -985,7 +985,7 @@ chatForm.addEventListener('submit', async e => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: currentSession, message: msg, model: currentModel }),
     });
-    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.error || `Server error ${res.status}`); }
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     turnCount = data.turn || 1;

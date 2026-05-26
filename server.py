@@ -5,10 +5,11 @@ import json
 import os
 import re
 import time
+from collections import defaultdict
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 
@@ -21,6 +22,71 @@ except ImportError:
 import db as database
 
 load_dotenv()
+
+
+# --- Rate Limiter ---
+class RateLimiter:
+    """Simple in-memory IP-based rate limiter. No extra dependencies."""
+
+    def __init__(
+        self,
+        per_minute: int = 5,
+        per_day: int = 50,
+        global_per_day: int = 500,
+    ):
+        self.per_minute = per_minute
+        self.per_day = per_day
+        self.global_per_day = global_per_day
+        self._minute_hits: dict[str, list[float]] = defaultdict(list)
+        self._day_hits: dict[str, list[float]] = defaultdict(list)
+        self._global_hits: list[float] = []
+
+    def _cleanup(self, bucket: list[float], window: float) -> list[float]:
+        now = time.time()
+        return [t for t in bucket if now - t < window]
+
+    def check(self, ip: str) -> str | None:
+        """Return an error message if rate-limited, else None."""
+        now = time.time()
+
+        # Per-minute check
+        self._minute_hits[ip] = self._cleanup(self._minute_hits[ip], 60)
+        if len(self._minute_hits[ip]) >= self.per_minute:
+            return "Too many requests. Please wait a minute before trying again."
+
+        # Per-day check
+        self._day_hits[ip] = self._cleanup(self._day_hits[ip], 86400)
+        if len(self._day_hits[ip]) >= self.per_day:
+            return "Daily usage limit reached. Please come back tomorrow!"
+
+        # Global daily check
+        self._global_hits = self._cleanup(self._global_hits, 86400)
+        if len(self._global_hits) >= self.global_per_day:
+            return "Service is at capacity for today. Please try again tomorrow."
+
+        return None
+
+    def record(self, ip: str) -> None:
+        now = time.time()
+        self._minute_hits[ip].append(now)
+        self._day_hits[ip].append(now)
+        self._global_hits.append(now)
+
+
+rate_limiter = RateLimiter(
+    per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "5")),
+    per_day=int(os.getenv("RATE_LIMIT_PER_DAY", "50")),
+    global_per_day=int(os.getenv("RATE_LIMIT_GLOBAL_DAY", "500")),
+)
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP, respecting reverse proxy headers."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
 
 app = FastAPI(title="MindReader AI")
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -448,6 +514,13 @@ async def index():
 
 @app.post("/api/chat")
 async def chat(request: Request):
+    # --- Rate limiting ---
+    client_ip = _get_client_ip(request)
+    limit_msg = rate_limiter.check(client_ip)
+    if limit_msg:
+        return JSONResponse(status_code=429, content={"error": limit_msg})
+    rate_limiter.record(client_ip)
+
     body = await request.json()
     session_id = body.get("session_id", "default")
     user_message = body.get("message", "").strip()
