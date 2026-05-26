@@ -30,11 +30,11 @@ Target: 1000 daily active users within 3 months.
 **Goal: Give users reasons to come back and share**
 
 - [ ] Custom domain (mindreader.ai or similar)
-- [ ] Prompt gallery — public feed of best prompts
+- [x] Prompt gallery — public feed of best prompts
 - [ ] User accounts (Google/GitHub OAuth)
 - [ ] Prompt collections / folders
 - [ ] Prompt remix — "use this as starting point"
-- [ ] Social sharing cards with preview
+- [x] Social sharing cards with preview
 - [ ] Analytics dashboard (Plausible/Umami)
 - [ ] Email collection for updates
 

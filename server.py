@@ -803,9 +803,12 @@ body{{margin:0;background:#09090b;color:#fafafa;min-height:100vh}}
     <div class="prompt-rendered" id="promptContent"></div>
   </div>
 
-  <div class="flex gap-3 mt-4">
+  <div class="flex flex-wrap gap-3 mt-4">
     <button onclick="copyPrompt()" id="copyBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-semibold transition">Copy Prompt</button>
-    <a href="/" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">Create Your Own</a>
+    <button onclick="copyFor('midjourney',this)" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition">&#127912; Midjourney</button>
+    <button onclick="copyFor('chatgpt',this)" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition">&#128172; ChatGPT</button>
+    <a href="/" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#10024; Create Your Own</a>
+    <a href="/gallery" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#128218; Gallery</a>
   </div>
 </div>
 <script>
@@ -828,6 +831,26 @@ function copyPrompt() {{
     b.classList.replace('bg-indigo-600','bg-emerald-600');
     setTimeout(()=>{{ b.textContent='Copy Prompt'; b.classList.replace('bg-emerald-600','bg-indigo-600'); }}, 2000);
   }});
+}}
+async function copyFor(tool, btn) {{
+  const orig = btn.innerHTML;
+  btn.textContent = '...';
+  try {{
+    const res = await fetch('/api/format', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ prompt: rawPrompt, format: tool }}),
+    }});
+    const data = await res.json();
+    await navigator.clipboard.writeText(data.formatted || rawPrompt);
+    btn.textContent = '✓ Copied!';
+    btn.classList.replace('bg-zinc-800','bg-emerald-600');
+    setTimeout(()=>{{ btn.innerHTML = orig; btn.classList.replace('bg-emerald-600','bg-zinc-800'); }}, 2000);
+  }} catch {{
+    await navigator.clipboard.writeText(rawPrompt);
+    btn.textContent = '✓ Raw copied';
+    setTimeout(()=>{{ btn.innerHTML = orig; }}, 2000);
+  }}
 }}
 </script>
 </body></html>""")
