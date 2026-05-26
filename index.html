@@ -628,12 +628,11 @@ const i18n = {
   }
 };
 
-// Auto-detect language: check localStorage override, then browser language
+// Default to English unless the user explicitly chose another UI language.
 function detectUILang() {
   const stored = localStorage.getItem('mr_lang');
   if (stored && (stored === 'en' || stored === 'zh')) return stored;
-  const nav = navigator.language || navigator.userLanguage || 'en';
-  return nav.startsWith('zh') ? 'zh' : 'en';
+  return 'en';
 }
 
 let uiLang = detectUILang();
