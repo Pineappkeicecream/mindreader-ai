@@ -152,11 +152,33 @@ def init_db() -> None:
     except Exception:
         conn.rollback()  # column already exists
 
+    cur.execute(f"""
+        CREATE TABLE IF NOT EXISTS analytics (
+            id {_AUTOINCREMENT} PRIMARY KEY,
+            event TEXT NOT NULL,
+            path TEXT DEFAULT '',
+            referrer TEXT DEFAULT '',
+            user_id TEXT DEFAULT '',
+            ip_hash TEXT DEFAULT '',
+            created_at {_REAL_TYPE} NOT NULL
+        )
+    """)
+
     # Create indexes (IF NOT EXISTS works in both SQLite and PostgreSQL 9.5+)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, updated_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, turn_number)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_prompts_created ON prompts(created_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_prompts_domain ON prompts(domain)")
+    cur.execute(f"""
+        CREATE TABLE IF NOT EXISTS subscribers (
+            id {_AUTOINCREMENT} PRIMARY KEY,
+            email TEXT NOT NULL UNIQUE,
+            created_at {_REAL_TYPE} NOT NULL
+        )
+    """)
+
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics(event, created_at DESC)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics(created_at DESC)")
 
     conn.commit()
     cur.close()
@@ -386,6 +408,115 @@ def rate_prompt(prompt_id: int, rating: int) -> bool:
     cur.close()
     conn.close()
     return affected > 0
+
+
+# --- Subscribers ---
+
+def add_subscriber(email: str) -> bool:
+    """Add an email subscriber. Returns True if new, False if already exists."""
+    conn = _connect()
+    try:
+        conn.cursor().execute(
+            f"INSERT INTO subscribers (email, created_at) VALUES ({_PH}, {_PH})",
+            (email.lower().strip(), time.time()),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        conn.rollback()
+        conn.close()
+        return False
+
+
+def get_subscriber_count() -> int:
+    conn = _connect()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM subscribers")
+    count = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return count
+
+
+# --- Analytics ---
+
+def track_event(event: str, path: str = "", referrer: str = "", user_id: str = "", ip_hash: str = "") -> None:
+    conn = _connect()
+    conn.cursor().execute(
+        f"INSERT INTO analytics (event, path, referrer, user_id, ip_hash, created_at) "
+        f"VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH})",
+        (event, path[:500], referrer[:500], user_id[:100], ip_hash[:64], time.time()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_analytics(days: int = 7) -> dict:
+    """Get analytics summary for the last N days."""
+    conn = _connect()
+    cur = conn.cursor()
+    cutoff = time.time() - (days * 86400)
+
+    # Total page views
+    cur.execute(f"SELECT COUNT(*) FROM analytics WHERE event = 'pageview' AND created_at >= {_PH}", (cutoff,))
+    pageviews = cur.fetchone()[0]
+
+    # Unique visitors (by user_id)
+    cur.execute(f"SELECT COUNT(DISTINCT user_id) FROM analytics WHERE event = 'pageview' AND created_at >= {_PH} AND user_id != ''", (cutoff,))
+    unique_visitors = cur.fetchone()[0]
+
+    # Prompts generated
+    cur.execute(f"SELECT COUNT(*) FROM analytics WHERE event = 'prompt_generated' AND created_at >= {_PH}", (cutoff,))
+    prompts_generated = cur.fetchone()[0]
+
+    # Page views by path
+    cur.execute(
+        f"SELECT path, COUNT(*) as cnt FROM analytics WHERE event = 'pageview' AND created_at >= {_PH} GROUP BY path ORDER BY cnt DESC LIMIT 10",
+        (cutoff,),
+    )
+    top_pages = _rows_to_dicts(cur)
+
+    # Daily breakdown
+    cur.execute(
+        f"""SELECT
+            CAST((created_at - {_PH}) / 86400 AS INTEGER) as day_offset,
+            COUNT(*) as views,
+            COUNT(DISTINCT user_id) as visitors
+        FROM analytics
+        WHERE event = 'pageview' AND created_at >= {_PH}
+        GROUP BY day_offset
+        ORDER BY day_offset""",
+        (cutoff, cutoff),
+    )
+    daily = _rows_to_dicts(cur)
+
+    # Top referrers
+    cur.execute(
+        f"SELECT referrer, COUNT(*) as cnt FROM analytics WHERE event = 'pageview' AND created_at >= {_PH} AND referrer != '' GROUP BY referrer ORDER BY cnt DESC LIMIT 10",
+        (cutoff,),
+    )
+    top_referrers = _rows_to_dicts(cur)
+
+    # Events breakdown
+    cur.execute(
+        f"SELECT event, COUNT(*) as cnt FROM analytics WHERE created_at >= {_PH} GROUP BY event ORDER BY cnt DESC",
+        (cutoff,),
+    )
+    events = _rows_to_dicts(cur)
+
+    cur.close()
+    conn.close()
+    return {
+        "days": days,
+        "pageviews": pageviews,
+        "unique_visitors": unique_visitors,
+        "prompts_generated": prompts_generated,
+        "top_pages": top_pages,
+        "daily": daily,
+        "top_referrers": top_referrers,
+        "events": events,
+    }
 
 
 # --- Stats ---

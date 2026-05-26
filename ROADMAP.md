@@ -33,10 +33,10 @@ Target: 1000 daily active users within 3 months.
 - [x] Prompt gallery — public feed of best prompts
 - [ ] User accounts (Google/GitHub OAuth)
 - [ ] Prompt collections / folders
-- [ ] Prompt remix — "use this as starting point"
+- [x] Prompt remix — "use this as starting point"
 - [x] Social sharing cards with preview
-- [ ] Analytics dashboard (Plausible/Umami)
-- [ ] Email collection for updates
+- [x] Analytics dashboard (built-in, /analytics)
+- [x] Email collection for updates
 
 ## Phase 3: Monetization (Week 4-8)
 **Goal: Generate revenue to cover API costs**

@@ -299,8 +299,16 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
       <div class="px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Saved Prompts</div>
     </div>
 
-    <!-- Gallery link + Stats footer -->
+    <!-- Gallery link -->
     <a href="/gallery" class="block mx-3 mb-2 text-center text-[11px] text-indigo-400 hover:text-indigo-300 border border-zinc-800 hover:border-indigo-500/30 rounded-lg py-2 transition font-medium">&#10024; Prompt Gallery</a>
+    <!-- Email subscribe -->
+    <div class="px-3 mb-2" id="subscribeBox">
+      <form onsubmit="subscribeEmail(event)" class="flex gap-1">
+        <input type="email" id="subEmail" placeholder="Get updates" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-white outline-none placeholder:text-zinc-700 focus:border-indigo-500 transition min-w-0">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-2 py-1.5 text-[10px] font-semibold transition flex-shrink-0" id="subBtn">&#10003;</button>
+      </form>
+    </div>
+    <!-- Stats footer -->
     <div class="p-3 border-t border-zinc-800/50 text-[10px] text-zinc-600 text-center" id="sidebarStats">
       Loading stats...
     </div>
@@ -1478,6 +1486,31 @@ function dismissOnboarding() {
   chatInput.focus();
 }
 
+// ===== Remix =====
+async function handleRemix() {
+  const params = new URLSearchParams(window.location.search);
+  const remixId = params.get('remix');
+  if (!remixId) return false;
+
+  // Clean URL
+  window.history.replaceState({}, '', '/');
+
+  try {
+    const res = await fetch(`/api/prompts/${remixId}`);
+    const p = await res.json();
+    if (p.error || !p.summary) return false;
+
+    // Start a fresh session with the remix context
+    await resetChat();
+    const remixMsg = uiLang === 'zh'
+      ? `我想基于这个方向做一个类似的：${p.summary.substring(0, 300)}`
+      : `I want to create something similar to this: ${p.summary.substring(0, 300)}`;
+    chatInput.value = remixMsg;
+    chatInput.dispatchEvent(new Event('input'));
+    return true;
+  } catch { return false; }
+}
+
 // ===== Boot =====
 async function boot() {
   applyI18n();
@@ -1486,7 +1519,12 @@ async function boot() {
     await loadSession(currentSession);
   }
   loadStats();
-  showOnboarding();
+
+  // Check for remix param before showing onboarding
+  const isRemix = await handleRemix();
+  if (!isRemix) {
+    showOnboarding();
+  }
   chatInput.focus();
 }
 
@@ -1497,6 +1535,54 @@ document.addEventListener('click', e => {
   const btn = e.target.closest('.export-btn');
   if (btn && !btn.dataset.orig) btn.dataset.orig = btn.innerHTML;
 });
+
+// ===== Email Subscribe =====
+async function subscribeEmail(e) {
+  e.preventDefault();
+  const input = document.getElementById('subEmail');
+  const btn = document.getElementById('subBtn');
+  const email = input.value.trim();
+  if (!email) return;
+  btn.textContent = '...';
+  try {
+    const res = await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('subscribeBox').innerHTML = `<div class="text-[11px] text-emerald-400 text-center py-1.5">✓ ${uiLang === 'zh' ? '订阅成功！' : 'Subscribed!'}</div>`;
+      localStorage.setItem('mr_subscribed', '1');
+    } else {
+      btn.textContent = '✗';
+      setTimeout(() => { btn.innerHTML = '&#10003;'; }, 2000);
+    }
+  } catch {
+    btn.textContent = '✗';
+    setTimeout(() => { btn.innerHTML = '&#10003;'; }, 2000);
+  }
+}
+
+// Hide subscribe if already subscribed
+if (localStorage.getItem('mr_subscribed')) {
+  const sb = document.getElementById('subscribeBox');
+  if (sb) sb.style.display = 'none';
+}
+
+// ===== Analytics =====
+(function trackPageView() {
+  fetch('/api/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      event: 'pageview',
+      path: location.pathname,
+      referrer: document.referrer || '',
+      user_id: userId,
+    }),
+  }).catch(() => {});
+})();
 </script>
 </body>
 </html>

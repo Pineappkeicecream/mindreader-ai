@@ -807,6 +807,7 @@ body{{margin:0;background:#09090b;color:#fafafa;min-height:100vh}}
     <button onclick="copyPrompt()" id="copyBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-semibold transition">Copy Prompt</button>
     <button onclick="copyFor('midjourney',this)" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition">&#127912; Midjourney</button>
     <button onclick="copyFor('chatgpt',this)" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition">&#128172; ChatGPT</button>
+    <a href="/?remix={prompt_id}" class="bg-purple-600 hover:bg-purple-500 text-white rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#128260; Remix</a>
     <a href="/" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#10024; Create Your Own</a>
     <a href="/gallery" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#128218; Gallery</a>
   </div>
@@ -1130,6 +1131,8 @@ Please output the complete JSON again in the same format."""
             session_id, fp, data.get("summary", ""), domain, first_user_msg
         )
         database.update_session(session_id)
+        # Track prompt generation event
+        database.track_event("prompt_generated", f"/prompt/{prompt_id}", "", user_id, _hash_ip(_get_client_ip(request)))
 
     return {
         "intro": data.get("intro", ""),
@@ -1259,7 +1262,203 @@ async def stats():
         "domains": len(DOMAIN_EXPERTS),
         "thumbs_up": db_stats.get("thumbs_up", 0),
         "thumbs_down": db_stats.get("thumbs_down", 0),
+        "subscribers": database.get_subscriber_count(),
     }
+
+
+import hashlib
+
+def _hash_ip(ip: str) -> str:
+    """Hash IP for privacy-preserving analytics."""
+    return hashlib.sha256((ip + "mindreader-salt").encode()).hexdigest()[:16]
+
+
+@app.post("/api/track")
+async def track_event(request: Request):
+    """Track a page view or event for analytics."""
+    body = await request.json()
+    event = body.get("event", "pageview")
+    path = body.get("path", "/")
+    referrer = body.get("referrer", "")
+    user_id = body.get("user_id", "")
+    ip = _get_client_ip(request)
+    database.track_event(event, path, referrer, user_id, _hash_ip(ip))
+    return {"ok": True}
+
+
+@app.get("/api/analytics")
+async def analytics_api(days: int = 7):
+    """Return analytics summary. Simple dashboard data."""
+    days = max(1, min(days, 90))
+    return database.get_analytics(days=days)
+
+
+@app.post("/api/subscribe")
+async def subscribe(request: Request):
+    """Subscribe to email updates."""
+    body = await request.json()
+    email = (body.get("email") or "").strip().lower()
+    if not email or "@" not in email or "." not in email:
+        return JSONResponse(status_code=400, content={"error": "Invalid email"})
+    is_new = database.add_subscriber(email)
+    return {"ok": True, "new": is_new}
+
+
+@app.get("/analytics", response_class=HTMLResponse)
+async def analytics_page():
+    """Simple analytics dashboard."""
+    return HTMLResponse(ANALYTICS_HTML)
+
+
+ANALYTICS_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics — MindReader AI</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F46E5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23E0E7FF'/%3E%3C/svg%3E">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{font-family:'Inter',sans-serif;box-sizing:border-box}
+body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
+.stat-card{background:#111113;border:1px solid #1e1e22;border-radius:16px;padding:20px;text-align:center}
+.stat-value{font-size:32px;font-weight:800;background:linear-gradient(135deg,#818cf8,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{font-size:12px;color:#71717a;margin-top:4px;font-weight:500}
+.bar{height:24px;border-radius:6px;background:#1e1b4b;transition:width .5s ease}
+.bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#6366f1,#818cf8)}
+.period-btn{background:#18181b;border:1px solid #27272a;border-radius:8px;padding:5px 14px;font-size:12px;color:#a1a1aa;cursor:pointer;transition:all .2s}
+.period-btn:hover{border-color:#6366f1;color:#e0e7ff}
+.period-btn.active{background:#1e1b4b;color:#c7d2fe;border-color:#6366f1}
+</style>
+</head>
+<body>
+<header class="border-b border-zinc-800/50 px-4 sm:px-6 py-4">
+  <div class="max-w-5xl mx-auto flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2.5 hover:opacity-80 transition">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#4F46E5"/>
+        <circle cx="16" cy="16" r="2.5" fill="#E0E7FF"/>
+      </svg>
+      <span class="text-sm font-bold text-white">MindReader AI</span>
+      <span class="text-xs text-zinc-600 ml-1">Analytics</span>
+    </a>
+    <div class="flex gap-2" id="periodBtns">
+      <button class="period-btn" onclick="loadData(1,this)">Today</button>
+      <button class="period-btn active" onclick="loadData(7,this)">7 Days</button>
+      <button class="period-btn" onclick="loadData(30,this)">30 Days</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+  <!-- Top stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8" id="topStats">
+    <div class="stat-card"><div class="stat-value" id="pvCount">-</div><div class="stat-label">Page Views</div></div>
+    <div class="stat-card"><div class="stat-value" id="uvCount">-</div><div class="stat-label">Unique Visitors</div></div>
+    <div class="stat-card"><div class="stat-value" id="pgCount">-</div><div class="stat-label">Prompts Generated</div></div>
+    <div class="stat-card"><div class="stat-value" id="evCount">-</div><div class="stat-label">Total Events</div></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Daily chart -->
+    <div class="bg-[#111113] border border-[#1e1e22] rounded-2xl p-5">
+      <h3 class="text-sm font-semibold text-zinc-300 mb-4">Daily Views</h3>
+      <div id="dailyChart" class="space-y-2"></div>
+    </div>
+
+    <!-- Events breakdown -->
+    <div class="bg-[#111113] border border-[#1e1e22] rounded-2xl p-5">
+      <h3 class="text-sm font-semibold text-zinc-300 mb-4">Events</h3>
+      <div id="eventsBreakdown" class="space-y-2"></div>
+    </div>
+
+    <!-- Top pages -->
+    <div class="bg-[#111113] border border-[#1e1e22] rounded-2xl p-5">
+      <h3 class="text-sm font-semibold text-zinc-300 mb-4">Top Pages</h3>
+      <div id="topPages" class="space-y-2"></div>
+    </div>
+
+    <!-- Referrers -->
+    <div class="bg-[#111113] border border-[#1e1e22] rounded-2xl p-5">
+      <h3 class="text-sm font-semibold text-zinc-300 mb-4">Referrers</h3>
+      <div id="referrers" class="space-y-2"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+async function loadData(days, btn) {
+  if (btn) {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  try {
+    const res = await fetch('/api/analytics?days=' + days);
+    const d = await res.json();
+    render(d);
+  } catch { console.error('Failed to load analytics'); }
+}
+
+function render(d) {
+  const totalEvents = d.events.reduce((s, e) => s + e.cnt, 0);
+  document.getElementById('pvCount').textContent = d.pageviews.toLocaleString();
+  document.getElementById('uvCount').textContent = d.unique_visitors.toLocaleString();
+  document.getElementById('pgCount').textContent = d.prompts_generated.toLocaleString();
+  document.getElementById('evCount').textContent = totalEvents.toLocaleString();
+
+  // Daily chart
+  const maxViews = Math.max(...d.daily.map(r => r.views), 1);
+  const dailyEl = document.getElementById('dailyChart');
+  if (d.daily.length === 0) {
+    dailyEl.innerHTML = '<div class="text-xs text-zinc-600 text-center py-4">No data yet</div>';
+  } else {
+    dailyEl.innerHTML = d.daily.map(r => {
+      const pct = (r.views / maxViews * 100).toFixed(0);
+      const dayLabel = 'Day ' + (r.day_offset + 1);
+      return `<div class="flex items-center gap-3">
+        <span class="text-[10px] text-zinc-600 w-12 flex-shrink-0">${dayLabel}</span>
+        <div class="bar flex-1"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <span class="text-xs text-zinc-400 w-12 text-right">${r.views}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Events
+  const maxEvt = Math.max(...d.events.map(e => e.cnt), 1);
+  const evEl = document.getElementById('eventsBreakdown');
+  evEl.innerHTML = d.events.length ? d.events.map(e => `<div class="flex items-center gap-3">
+    <span class="text-xs text-zinc-400 w-32 truncate flex-shrink-0">${esc(e.event)}</span>
+    <div class="bar flex-1"><div class="bar-fill" style="width:${(e.cnt/maxEvt*100).toFixed(0)}%"></div></div>
+    <span class="text-xs text-zinc-400 w-10 text-right">${e.cnt}</span>
+  </div>`).join('') : '<div class="text-xs text-zinc-600 text-center py-4">No events yet</div>';
+
+  // Top pages
+  const maxPg = Math.max(...d.top_pages.map(p => p.cnt), 1);
+  const pgEl = document.getElementById('topPages');
+  pgEl.innerHTML = d.top_pages.length ? d.top_pages.map(p => `<div class="flex items-center gap-3">
+    <span class="text-xs text-zinc-400 w-32 truncate flex-shrink-0">${esc(p.path || '/')}</span>
+    <div class="bar flex-1"><div class="bar-fill" style="width:${(p.cnt/maxPg*100).toFixed(0)}%"></div></div>
+    <span class="text-xs text-zinc-400 w-10 text-right">${p.cnt}</span>
+  </div>`).join('') : '<div class="text-xs text-zinc-600 text-center py-4">No data yet</div>';
+
+  // Referrers
+  const maxRef = Math.max(...(d.top_referrers || []).map(r => r.cnt), 1);
+  const refEl = document.getElementById('referrers');
+  refEl.innerHTML = (d.top_referrers || []).length ? d.top_referrers.map(r => `<div class="flex items-center gap-3">
+    <span class="text-xs text-zinc-400 w-40 truncate flex-shrink-0">${esc(r.referrer)}</span>
+    <div class="bar flex-1"><div class="bar-fill" style="width:${(r.cnt/maxRef*100).toFixed(0)}%"></div></div>
+    <span class="text-xs text-zinc-400 w-10 text-right">${r.cnt}</span>
+  </div>`).join('') : '<div class="text-xs text-zinc-600 text-center py-4">No referrer data yet</div>';
+}
+
+loadData(7);
+</script>
+</body>
+</html>"""
 
 
 @app.get("/api/gallery")
@@ -1392,18 +1591,17 @@ async function loadGallery(append = false) {
 
       const card = document.createElement('div');
       card.className = 'gallery-card fade-in';
-      card.onclick = () => window.location.href = '/prompt/' + p.id;
       card.innerHTML = `
         <div class="flex items-center gap-2 mb-3">
           <span class="domain-badge ${p.domain}">${p.domain}</span>
           <span class="text-[10px] text-zinc-600">#${p.id}</span>
           ${ratingIcon ? '<span class="text-xs ml-auto">' + ratingIcon + '</span>' : ''}
         </div>
-        <div class="text-sm text-zinc-300 leading-relaxed mb-3 line-clamp-3" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(summary)}</div>
+        <div class="text-sm text-zinc-300 leading-relaxed mb-3 line-clamp-3" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer" onclick="window.location.href='/prompt/${p.id}'">${esc(summary)}</div>
         <div class="flex items-center gap-3 text-[10px] text-zinc-600">
           <span>${(p.char_count/1000).toFixed(1)}k chars</span>
           <span>${p.section_count || 0} sections</span>
-          <span class="ml-auto">${timeStr}</span>
+          <a href="/?remix=${p.id}" class="ml-auto text-indigo-400 hover:text-indigo-300 font-medium text-[11px]" onclick="event.stopPropagation()">&#128260; Remix</a>
         </div>
       `;
       grid.appendChild(card);
@@ -1428,6 +1626,13 @@ function loadMore() {
 }
 
 loadGallery();
+
+// Track gallery page view
+fetch('/api/track', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ event: 'pageview', path: '/gallery', referrer: document.referrer || '' }),
+}).catch(() => {});
 </script>
 </body>
 </html>"""
