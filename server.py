@@ -533,6 +533,7 @@ async def chat(request: Request):
 
     body = await request.json()
     session_id = body.get("session_id", "default")
+    user_id = body.get("user_id", "")
     user_message = body.get("message", "").strip()
     use_model = body.get("model", "gpt-4o-mini")  # "gpt-4o-mini" or "gpt-4o"
 
@@ -549,7 +550,7 @@ async def chat(request: Request):
             "domain": detected_domain,
         }
         print(f"New session {session_id[:8]}... | Domain: {detected_domain}")
-        database.save_session(session_id, detected_domain, use_model, user_message)
+        database.save_session(session_id, detected_domain, use_model, user_message, user_id=user_id)
 
     msgs = sessions[session_id]["messages"]
     domain = sessions[session_id].get("domain", "general")
@@ -759,11 +760,11 @@ async def reset(request: Request):
 
 
 @app.get("/api/sessions")
-async def list_sessions(limit: int = 30, offset: int = 0):
-    """Return recent sessions from SQLite for cross-refresh recovery."""
+async def list_sessions(limit: int = 30, offset: int = 0, user_id: str = ""):
+    """Return recent sessions, optionally filtered by user_id."""
     limit = max(1, min(limit, 100))
     offset = max(0, offset)
-    return database.get_sessions(limit=limit, offset=offset)
+    return database.get_sessions(limit=limit, offset=offset, user_id=user_id)
 
 
 @app.post("/api/format")

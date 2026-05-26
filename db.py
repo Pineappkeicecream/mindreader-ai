@@ -43,8 +43,8 @@ if DATABASE_URL:
     _AUTOINCREMENT = "SERIAL"
     _REAL_TYPE = "DOUBLE PRECISION"
     _UPSERT_CONFLICT = """
-        INSERT INTO sessions (id, domain, model, first_message, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO sessions (id, user_id, domain, model, first_message, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT(id) DO UPDATE SET
             domain = EXCLUDED.domain,
             model = EXCLUDED.model,
@@ -78,8 +78,8 @@ else:
     _AUTOINCREMENT = "INTEGER"
     _REAL_TYPE = "REAL"
     _UPSERT_CONFLICT = """
-        INSERT INTO sessions (id, domain, model, first_message, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO sessions (id, user_id, domain, model, first_message, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             domain = excluded.domain,
             model = excluded.model,
@@ -100,6 +100,7 @@ def init_db() -> None:
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS sessions (
             id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL DEFAULT '',
             domain TEXT NOT NULL DEFAULT 'general',
             model TEXT NOT NULL DEFAULT 'hybrid',
             first_message TEXT DEFAULT '',
@@ -137,6 +138,7 @@ def init_db() -> None:
     """)
 
     # Create indexes (IF NOT EXISTS works in both SQLite and PostgreSQL 9.5+)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, updated_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, turn_number)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_prompts_created ON prompts(created_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_prompts_domain ON prompts(domain)")
@@ -148,12 +150,12 @@ def init_db() -> None:
 
 # --- Sessions ---
 
-def save_session(session_id: str, domain: str, model: str, first_message: str = "") -> None:
+def save_session(session_id: str, domain: str, model: str, first_message: str = "", user_id: str = "") -> None:
     conn = _connect()
     now = time.time()
     conn.cursor().execute(
         _UPSERT_CONFLICT,
-        (session_id, domain, model, first_message[:200], now, now),
+        (session_id, user_id, domain, model, first_message[:200], now, now),
     )
     conn.commit()
     conn.close()
@@ -179,29 +181,42 @@ def get_session(session_id: str) -> dict | None:
     return result
 
 
-def get_sessions(limit: int = 30, offset: int = 0) -> list[dict]:
+def get_sessions(limit: int = 30, offset: int = 0, user_id: str = "") -> list[dict]:
     conn = _connect()
     cur = conn.cursor()
-    cur.execute(
-        f"""
-        SELECT
-            s.id,
-            s.domain,
-            s.model,
-            s.first_message,
-            s.created_at,
-            s.updated_at,
-            COUNT(CASE WHEN m.role = 'user' THEN 1 END) AS turns,
-            COUNT(DISTINCT p.id) AS prompt_count
-        FROM sessions s
-        LEFT JOIN messages m ON m.session_id = s.id
-        LEFT JOIN prompts p ON p.session_id = s.id AND p.deleted_at IS NULL
-        GROUP BY s.id, s.domain, s.model, s.first_message, s.created_at, s.updated_at
-        ORDER BY s.updated_at DESC
-        LIMIT {_PH} OFFSET {_PH}
-        """,
-        (limit, offset),
-    )
+    if user_id:
+        cur.execute(
+            f"""
+            SELECT
+                s.id, s.domain, s.model, s.first_message, s.created_at, s.updated_at,
+                COUNT(CASE WHEN m.role = 'user' THEN 1 END) AS turns,
+                COUNT(DISTINCT p.id) AS prompt_count
+            FROM sessions s
+            LEFT JOIN messages m ON m.session_id = s.id
+            LEFT JOIN prompts p ON p.session_id = s.id AND p.deleted_at IS NULL
+            WHERE s.user_id = {_PH}
+            GROUP BY s.id, s.domain, s.model, s.first_message, s.created_at, s.updated_at
+            ORDER BY s.updated_at DESC
+            LIMIT {_PH} OFFSET {_PH}
+            """,
+            (user_id, limit, offset),
+        )
+    else:
+        cur.execute(
+            f"""
+            SELECT
+                s.id, s.domain, s.model, s.first_message, s.created_at, s.updated_at,
+                COUNT(CASE WHEN m.role = 'user' THEN 1 END) AS turns,
+                COUNT(DISTINCT p.id) AS prompt_count
+            FROM sessions s
+            LEFT JOIN messages m ON m.session_id = s.id
+            LEFT JOIN prompts p ON p.session_id = s.id AND p.deleted_at IS NULL
+            GROUP BY s.id, s.domain, s.model, s.first_message, s.created_at, s.updated_at
+            ORDER BY s.updated_at DESC
+            LIMIT {_PH} OFFSET {_PH}
+            """,
+            (limit, offset),
+        )
     result = _rows_to_dicts(cur)
     cur.close()
     conn.close()

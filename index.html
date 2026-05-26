@@ -432,6 +432,9 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
 
 <script>
 // ===== State =====
+const userId = localStorage.getItem('mr_user_id') || crypto.randomUUID();
+localStorage.setItem('mr_user_id', userId);
+
 let currentSession = localStorage.getItem('mr_current_session') || crypto.randomUUID();
 let turnCount = 0;
 let currentModel = 'hybrid';
@@ -734,7 +737,7 @@ async function submitAnswers(roundId) {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: currentSession, message: answers.join('\n\n'), model: currentModel }),
+      body: JSON.stringify({ session_id: currentSession, user_id: userId, message: answers.join('\n\n'), model: currentModel }),
     });
     if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.error || `Server error ${res.status}`); }
     const data = await res.json();
@@ -851,7 +854,7 @@ function saveHistory() {
 async function loadSessions() {
   const panel = document.getElementById('sessionsPanel');
   try {
-    const res = await fetch('/api/sessions?limit=30');
+    const res = await fetch(`/api/sessions?limit=30&user_id=${userId}`);
     const sessions = await res.json();
     let html = '<div class="px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Recent</div>';
     if (!Array.isArray(sessions) || sessions.length === 0) {
@@ -1013,7 +1016,7 @@ chatForm.addEventListener('submit', async e => {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: currentSession, message: msg, model: currentModel }),
+      body: JSON.stringify({ session_id: currentSession, user_id: userId, message: msg, model: currentModel }),
     });
     if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.error || `Server error ${res.status}`); }
     const data = await res.json();
