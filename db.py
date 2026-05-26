@@ -202,8 +202,21 @@ def init_db() -> None:
         )
     """)
 
+    cur.execute(f"""
+        CREATE TABLE IF NOT EXISTS feedback (
+            id {_AUTOINCREMENT} PRIMARY KEY,
+            prompt_id INTEGER,
+            rating INTEGER DEFAULT 0,
+            comment TEXT NOT NULL,
+            user_id TEXT DEFAULT '',
+            created_at {_REAL_TYPE} NOT NULL,
+            FOREIGN KEY (prompt_id) REFERENCES prompts(id) ON DELETE SET NULL
+        )
+    """)
+
     cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics(event, created_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics(created_at DESC)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC)")
 
     conn.commit()
     cur.close()
@@ -588,6 +601,49 @@ def get_subscriber_count() -> int:
     return count
 
 
+# --- Feedback ---
+
+def save_feedback(prompt_id: int | None, rating: int, comment: str, user_id: str = "") -> int:
+    conn = _connect()
+    cur = conn.cursor()
+    if DATABASE_URL:
+        cur.execute(
+            f"""INSERT INTO feedback (prompt_id, rating, comment, user_id, created_at)
+            VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH}) RETURNING id""",
+            (prompt_id, max(-1, min(1, rating)), comment[:2000], user_id[:100], time.time()),
+        )
+        feedback_id = cur.fetchone()[0]
+    else:
+        cur.execute(
+            f"""INSERT INTO feedback (prompt_id, rating, comment, user_id, created_at)
+            VALUES ({_PH}, {_PH}, {_PH}, {_PH}, {_PH})""",
+            (prompt_id, max(-1, min(1, rating)), comment[:2000], user_id[:100], time.time()),
+        )
+        feedback_id = cur.lastrowid
+    conn.commit()
+    cur.close()
+    conn.close()
+    return feedback_id
+
+
+def get_recent_feedback(limit: int = 20) -> list[dict]:
+    conn = _connect()
+    cur = conn.cursor()
+    cur.execute(
+        f"""SELECT f.id, f.prompt_id, f.rating, f.comment, f.user_id, f.created_at,
+                   p.domain, p.preview_text
+        FROM feedback f
+        LEFT JOIN prompts p ON p.id = f.prompt_id
+        ORDER BY f.created_at DESC
+        LIMIT {_PH}""",
+        (limit,),
+    )
+    result = _rows_to_dicts(cur)
+    cur.close()
+    conn.close()
+    return result
+
+
 # --- Analytics ---
 
 def track_event(event: str, path: str = "", referrer: str = "", user_id: str = "", ip_hash: str = "") -> None:
@@ -654,6 +710,8 @@ def get_analytics(days: int = 7) -> dict:
     )
     events = _rows_to_dicts(cur)
 
+    recent_feedback = get_recent_feedback(limit=20)
+
     cur.close()
     conn.close()
     return {
@@ -665,6 +723,7 @@ def get_analytics(days: int = 7) -> dict:
         "daily": daily,
         "top_referrers": top_referrers,
         "events": events,
+        "recent_feedback": recent_feedback,
     }
 
 
@@ -677,6 +736,8 @@ def get_stats() -> dict:
     prompt_count = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM sessions")
     session_count = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM feedback")
+    feedback_count = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM prompts WHERE deleted_at IS NULL AND rating = 1")
     thumbs_up = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM prompts WHERE deleted_at IS NULL AND rating = -1")
@@ -688,4 +749,5 @@ def get_stats() -> dict:
         "session_count": session_count,
         "thumbs_up": thumbs_up,
         "thumbs_down": thumbs_down,
+        "feedback_count": feedback_count,
     }

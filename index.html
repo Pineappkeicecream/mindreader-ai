@@ -136,6 +136,10 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
 .rate-btn.active-up{border-color:#10b981;color:#10b981;background:#10b98110}
 .rate-btn.active-down{border-color:#ef4444;color:#ef4444;background:#ef444410}
 .rate-label{font-size:11px;color:#52525b}
+.feedback-box{margin-top:10px;display:flex;gap:8px;align-items:flex-start}
+.feedback-box textarea{flex:1;min-height:38px;max-height:90px;resize:vertical;background:#080f1a;border:1px solid #1e2d4a;border-radius:8px;color:#e4e4e7;font-size:12px;line-height:1.5;padding:8px 10px;outline:none}
+.feedback-box textarea:focus{border-color:#6366f1}
+.feedback-box button{flex-shrink:0}
 
 .continue-btn{
   background:#6366f1;color:#fff;border:none;
@@ -522,6 +526,8 @@ const i18n = {
     publishGallery: '✨ Publish to Gallery',
     removeGallery: '✓ In Gallery',
     howsPrompt: "How's this prompt?",
+    feedbackPlaceholder: 'What felt right or wrong?',
+    sendFeedback: 'Send',
     startNew: '+ Start a new creation',
     reading: 'Reading your mind...',
     analyzing: 'Analyzing your vision...',
@@ -583,6 +589,8 @@ const i18n = {
     publishGallery: '✨ 发布到画廊',
     removeGallery: '✓ 已在画廊',
     howsPrompt: '这个prompt怎么样？',
+    feedbackPlaceholder: '哪里像？哪里不像？',
+    sendFeedback: '发送',
     startNew: '+ 开始新的创作',
     reading: '正在读取你的想法...',
     analyzing: '正在分析你的愿景...',
@@ -863,6 +871,10 @@ function addAiRound(data) {
         <button class="rate-btn" id="rate-up-${data.prompt_id}" onclick="ratePrompt(${data.prompt_id},1,this)">&#128077;</button>
         <button class="rate-btn" id="rate-down-${data.prompt_id}" onclick="ratePrompt(${data.prompt_id},-1,this)">&#128078;</button>
       </div>` : ''}
+      ${data.prompt_id ? `<div class="feedback-box">
+        <textarea id="feedback-${data.prompt_id}" placeholder="${t('feedbackPlaceholder')}"></textarea>
+        <button class="export-btn" onclick="submitFeedback(${data.prompt_id},this)">${t('sendFeedback')}</button>
+      </div>` : ''}
     </div>
     <button onclick="resetChat()" class="mt-4 text-sm text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1.5 font-medium">
       ${t('startNew')}
@@ -1121,6 +1133,36 @@ async function ratePrompt(promptId, rating, btn) {
     if (newRating === 1) upBtn.classList.add('active-up');
     if (newRating === -1) downBtn.classList.add('active-down');
   } catch {}
+}
+
+async function submitFeedback(promptId, btn) {
+  const input = document.getElementById(`feedback-${promptId}`);
+  const comment = input?.value.trim() || '';
+  if (!comment) {
+    showError(uiLang === 'zh' ? '先写一点反馈' : 'Write a little feedback first');
+    return;
+  }
+  const original = btn.innerHTML;
+  btn.innerHTML = '&#8987;...';
+  try {
+    const activeUp = document.getElementById(`rate-up-${promptId}`)?.classList.contains('active-up');
+    const activeDown = document.getElementById(`rate-down-${promptId}`)?.classList.contains('active-down');
+    const rating = activeUp ? 1 : activeDown ? -1 : 0;
+    const res = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt_id: promptId, rating, comment, user_id: userId }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to send feedback');
+    input.value = '';
+    btn.innerHTML = '&#10004;';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerHTML = original; btn.classList.remove('copied'); }, 1800);
+  } catch (err) {
+    btn.innerHTML = original;
+    showError(err.message || 'Failed to send feedback');
+  }
 }
 
 // ===== Share prompt =====

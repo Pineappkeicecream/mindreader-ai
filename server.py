@@ -1424,7 +1424,22 @@ async def stats():
         "domains": len(DOMAIN_EXPERTS),
         "thumbs_up": db_stats.get("thumbs_up", 0),
         "thumbs_down": db_stats.get("thumbs_down", 0),
+        "feedback_count": db_stats.get("feedback_count", 0),
         "subscribers": database.get_subscriber_count(),
+    }
+
+
+@app.get("/api/beta-check")
+async def beta_check(request: Request):
+    """Return non-secret beta readiness checks."""
+    return {
+        "openai_key_configured": bool(os.getenv("OPENAI_API_KEY")),
+        "access_code_enabled": bool(_access_code()),
+        "admin_token_enabled": bool(_admin_token()),
+        "database": "postgres" if os.getenv("DATABASE_URL") else "sqlite",
+        "has_access": _has_access(request),
+        "domains": len(DOMAIN_EXPERTS),
+        "kb_prompts": len(KNOWLEDGE_BASE),
     }
 
 
@@ -1464,6 +1479,22 @@ async def subscribe(request: Request):
         return JSONResponse(status_code=400, content={"error": "Invalid email"})
     is_new = database.add_subscriber(email)
     return {"ok": True, "new": is_new}
+
+
+@app.post("/api/feedback")
+async def submit_feedback(request: Request):
+    """Store short beta feedback from a user."""
+    body = await request.json()
+    comment = (body.get("comment") or "").strip()
+    if not comment:
+        return JSONResponse(status_code=400, content={"error": "Feedback is empty"})
+    prompt_id_raw = body.get("prompt_id")
+    prompt_id = int(prompt_id_raw) if prompt_id_raw else None
+    rating = int(body.get("rating", 0) or 0)
+    user_id = body.get("user_id", "")
+    feedback_id = database.save_feedback(prompt_id, rating, comment, user_id)
+    database.track_event("feedback_submitted", f"/prompt/{prompt_id or ''}", "", user_id, _hash_ip(_get_client_ip(request)))
+    return {"ok": True, "id": feedback_id}
 
 
 @app.get("/analytics", response_class=HTMLResponse)
@@ -1547,13 +1578,18 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
       <div id="topPages" class="space-y-2"></div>
     </div>
 
-    <!-- Referrers -->
-    <div class="bg-[#111113] border border-[#1e1e22] rounded-2xl p-5">
-      <h3 class="text-sm font-semibold text-zinc-300 mb-4">Referrers</h3>
-      <div id="referrers" class="space-y-2"></div>
-    </div>
-  </div>
-</main>
+	    <!-- Referrers -->
+	    <div class="bg-[#111113] border border-[#1e1e22] rounded-2xl p-5">
+	      <h3 class="text-sm font-semibold text-zinc-300 mb-4">Referrers</h3>
+	      <div id="referrers" class="space-y-2"></div>
+	    </div>
+	  </div>
+
+	  <div class="bg-[#111113] border border-[#1e1e22] rounded-2xl p-5 mt-6">
+	    <h3 class="text-sm font-semibold text-zinc-300 mb-4">Recent Feedback</h3>
+	    <div id="recentFeedback" class="space-y-3"></div>
+	  </div>
+	</main>
 
 <script>
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -1615,13 +1651,29 @@ function render(d) {
 
   // Referrers
   const maxRef = Math.max(...(d.top_referrers || []).map(r => r.cnt), 1);
-  const refEl = document.getElementById('referrers');
-  refEl.innerHTML = (d.top_referrers || []).length ? d.top_referrers.map(r => `<div class="flex items-center gap-3">
-    <span class="text-xs text-zinc-400 w-40 truncate flex-shrink-0">${esc(r.referrer)}</span>
-    <div class="bar flex-1"><div class="bar-fill" style="width:${(r.cnt/maxRef*100).toFixed(0)}%"></div></div>
-    <span class="text-xs text-zinc-400 w-10 text-right">${r.cnt}</span>
-  </div>`).join('') : '<div class="text-xs text-zinc-600 text-center py-4">No referrer data yet</div>';
-}
+	  const refEl = document.getElementById('referrers');
+	  refEl.innerHTML = (d.top_referrers || []).length ? d.top_referrers.map(r => `<div class="flex items-center gap-3">
+	    <span class="text-xs text-zinc-400 w-40 truncate flex-shrink-0">${esc(r.referrer)}</span>
+	    <div class="bar flex-1"><div class="bar-fill" style="width:${(r.cnt/maxRef*100).toFixed(0)}%"></div></div>
+	    <span class="text-xs text-zinc-400 w-10 text-right">${r.cnt}</span>
+	  </div>`).join('') : '<div class="text-xs text-zinc-600 text-center py-4">No referrer data yet</div>';
+
+	  // Feedback
+	  const fbEl = document.getElementById('recentFeedback');
+	  fbEl.innerHTML = (d.recent_feedback || []).length ? d.recent_feedback.map(f => {
+	    const rating = f.rating > 0 ? '👍' : f.rating < 0 ? '👎' : '•';
+	    const date = new Date((f.created_at || 0) * 1000).toLocaleString();
+	    return `<div class="border border-zinc-800 rounded-xl p-3">
+	      <div class="flex items-center gap-2 text-[11px] text-zinc-500 mb-2">
+	        <span>${rating}</span>
+	        <span>#${f.prompt_id || '-'}</span>
+	        <span>${esc(f.domain || 'general')}</span>
+	        <span class="ml-auto">${date}</span>
+	      </div>
+	      <div class="text-sm text-zinc-300 leading-relaxed">${esc(f.comment || '')}</div>
+	    </div>`;
+	  }).join('') : '<div class="text-xs text-zinc-600 text-center py-4">No feedback yet</div>';
+	}
 
 loadData(7);
 </script>

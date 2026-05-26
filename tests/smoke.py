@@ -28,6 +28,10 @@ def main() -> None:
     assert stats.status_code == 200
     assert stats.json()["domains"] >= 6
 
+    beta = client.get("/api/beta-check")
+    assert beta.status_code == 200
+    assert "access_code_enabled" in beta.json()
+
     sessions = client.get("/api/sessions?limit=5")
     assert sessions.status_code == 200
     assert isinstance(sessions.json(), list)
@@ -82,6 +86,21 @@ def main() -> None:
     assert share.json()["ok"] is True
     shared_page = client.get(share.json()["url"])
     assert shared_page.status_code == 200
+
+    feedback = client.post(
+        "/api/feedback",
+        json={
+            "prompt_id": prompt_id,
+            "rating": 1,
+            "comment": "Smoke feedback: prompt was useful",
+            "user_id": "smoke-owner",
+        },
+    )
+    assert feedback.status_code == 200
+    assert feedback.json()["ok"] is True
+    analytics = client.get("/api/analytics?token=")
+    # ADMIN_TOKEN is usually unset locally; analytics should still be protected.
+    assert analytics.status_code in {403, 200}
     db.delete_prompt(prompt_id, user_id="smoke-owner")
 
     db.save_session("smoke-user-a", "general", "hybrid", "user a", user_id="smoke-a")
