@@ -437,6 +437,30 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
   </div>
 </div>
 
+<!-- Onboarding overlay (first-time users) -->
+<div id="onboardingOverlay" class="fixed inset-0 z-[60] hidden">
+  <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="onboarding-card bg-[#0c0c0e] border border-zinc-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl relative z-10" style="animation:fadeIn .5s ease-out">
+      <!-- Steps indicator -->
+      <div class="flex justify-center gap-2 pt-5 pb-2" id="onboardingDots">
+        <div class="w-2 h-2 rounded-full bg-indigo-500 transition-all" data-step="0"></div>
+        <div class="w-2 h-2 rounded-full bg-zinc-700 transition-all" data-step="1"></div>
+        <div class="w-2 h-2 rounded-full bg-zinc-700 transition-all" data-step="2"></div>
+      </div>
+      <!-- Step content -->
+      <div class="px-8 py-6 text-center" id="onboardingContent">
+        <!-- Filled dynamically -->
+      </div>
+      <!-- Actions -->
+      <div class="px-8 pb-6 flex items-center justify-between">
+        <button id="onboardingSkip" onclick="dismissOnboarding()" class="text-xs text-zinc-600 hover:text-zinc-400 transition">Skip</button>
+        <button id="onboardingNext" onclick="nextOnboardingStep()" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-6 py-2.5 text-sm font-semibold transition">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Prompt viewer modal (for library) -->
 <div id="promptModal" class="fixed inset-0 z-50 hidden">
   <div class="absolute inset-0 bg-black/70" onclick="closePromptModal()"></div>
@@ -1362,6 +1386,97 @@ setInterval(() => {
   }
 }, 3000);
 
+// ===== Onboarding =====
+const onboardingSteps = {
+  en: [
+    {
+      icon: '🧠',
+      title: 'Welcome to MindReader AI',
+      desc: 'I\'m an AI prompt architect. Tell me your idea — even just a sentence — and I\'ll help you create the perfect prompt for any AI tool.',
+    },
+    {
+      icon: '💬',
+      title: 'Expert Questions, Not Generic Ones',
+      desc: 'I\'ll ask you 2 rounds of expert-level questions with vivid options — like a creative director would. Pick what resonates, add your own details.',
+    },
+    {
+      icon: '✨',
+      title: 'Get a Professional Prompt',
+      desc: 'I generate a detailed 2000+ character prompt optimized for Midjourney, DALL-E, ChatGPT, Stable Diffusion, and more. Copy and go!',
+    },
+  ],
+  zh: [
+    {
+      icon: '🧠',
+      title: '欢迎使用 MindReader AI',
+      desc: '我是AI prompt架构师。告诉我你的想法——哪怕只是一句话——我会帮你创造适用于任何AI工具的完美prompt。',
+    },
+    {
+      icon: '💬',
+      title: '专家级提问，不是通用问题',
+      desc: '我会用2轮专业问题深入了解你的想法，每个选项都配有生动的场景描述。选择最贴近的，补充你的想法。',
+    },
+    {
+      icon: '✨',
+      title: '获得专业级Prompt',
+      desc: '我会生成2000+字的详细prompt，为Midjourney、DALL-E、ChatGPT、Stable Diffusion等工具优化。一键复制即可使用！',
+    },
+  ],
+};
+
+let onboardingStep = 0;
+
+function showOnboarding() {
+  if (localStorage.getItem('mr_onboarded')) return;
+  onboardingStep = 0;
+  document.getElementById('onboardingOverlay').classList.remove('hidden');
+  renderOnboardingStep();
+}
+
+function renderOnboardingStep() {
+  const steps = onboardingSteps[uiLang] || onboardingSteps.en;
+  const step = steps[onboardingStep];
+  const content = document.getElementById('onboardingContent');
+  content.innerHTML = `
+    <div style="font-size:48px;margin-bottom:16px">${step.icon}</div>
+    <h2 class="text-xl font-bold text-white mb-3">${step.title}</h2>
+    <p class="text-sm text-zinc-400 leading-relaxed">${step.desc}</p>
+  `;
+  // Update dots
+  document.querySelectorAll('#onboardingDots > div').forEach((dot, i) => {
+    dot.className = `w-2 h-2 rounded-full transition-all ${i === onboardingStep ? 'bg-indigo-500 w-6' : 'bg-zinc-700'}`;
+  });
+  // Update buttons
+  const nextBtn = document.getElementById('onboardingNext');
+  const skipBtn = document.getElementById('onboardingSkip');
+  if (onboardingStep >= steps.length - 1) {
+    nextBtn.textContent = uiLang === 'zh' ? '开始使用 🚀' : 'Get Started 🚀';
+    nextBtn.onclick = dismissOnboarding;
+    skipBtn.style.display = 'none';
+  } else {
+    nextBtn.textContent = uiLang === 'zh' ? '下一步' : 'Next';
+    nextBtn.onclick = nextOnboardingStep;
+    skipBtn.style.display = '';
+    skipBtn.textContent = uiLang === 'zh' ? '跳过' : 'Skip';
+  }
+}
+
+function nextOnboardingStep() {
+  const steps = onboardingSteps[uiLang] || onboardingSteps.en;
+  if (onboardingStep < steps.length - 1) {
+    onboardingStep++;
+    renderOnboardingStep();
+  } else {
+    dismissOnboarding();
+  }
+}
+
+function dismissOnboarding() {
+  localStorage.setItem('mr_onboarded', '1');
+  document.getElementById('onboardingOverlay').classList.add('hidden');
+  chatInput.focus();
+}
+
 // ===== Boot =====
 async function boot() {
   applyI18n();
@@ -1370,6 +1485,7 @@ async function boot() {
     await loadSession(currentSession);
   }
   loadStats();
+  showOnboarding();
   chatInput.focus();
 }
 

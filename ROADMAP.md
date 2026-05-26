@@ -21,8 +21,8 @@ Target: 1000 daily active users within 3 months.
 - [x] SEO basics (JSON-LD, OG tags)
 - [x] Custom 404 page
 - [x] Smart input depth detection (CJK-aware)
-- [ ] English language support (i18n)
-- [ ] Better onboarding — first-time user tutorial overlay
+- [x] English language support (i18n)
+- [x] Better onboarding — first-time user tutorial overlay
 - [ ] Prompt rating system (thumbs up/down)
 - [ ] Session naming (auto-generate from first message)
 
