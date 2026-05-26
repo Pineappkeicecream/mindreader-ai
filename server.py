@@ -973,6 +973,21 @@ async def stats():
     }
 
 
+@app.exception_handler(404)
+async def not_found(request: Request, exc):
+    """Custom 404 page."""
+    return HTMLResponse(
+        """<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>404 — MindReader AI</title>
+<style>*{font-family:Inter,system-ui,sans-serif}body{margin:0;background:#09090b;color:#fafafa;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center}
+a{color:#818cf8;text-decoration:none}a:hover{text-decoration:underline}</style></head>
+<body><div><h1 style="font-size:72px;margin:0;color:#27272a">404</h1>
+<p style="color:#71717a;margin:16px 0">This page doesn't exist.</p>
+<a href="/">Go to MindReader AI &rarr;</a></div></body></html>""",
+        status_code=404,
+    )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=7777)
