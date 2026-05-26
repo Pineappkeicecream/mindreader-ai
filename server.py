@@ -202,7 +202,16 @@ def build_round_context(domain: str, round_num: int) -> str:
     if round_num == 1:
         return f"\n\n[SYSTEM: This is Round 1. {round_text}]"
     elif round_num == 2:
-        return f"\n\n[SYSTEM: This is Round 2. {round_text}]"
+        return f"""\n\n[SYSTEM: This is Round 2 — EXPERT DEEP DIVE. {round_text}
+
+## Round 2 QUALITY RULES:
+1. Use the must_ask_dimensions from the domain expert. Ask 3-5 questions covering different dimensions.
+2. Each question MUST have 3-4 options. Two options is too few — it feels like a yes/no.
+3. Each option description must be a vivid micro-scene with a specific reference (brand, movie, artwork).
+4. You MUST ask "什么是你绝对不想要的？" — this powers the Negative Prompt section.
+5. NEVER repeat what the user told you in previous rounds. Read the conversation history carefully.
+6. Questions should use specific brand/work anchors. ❌"你想要什么光线？" ✅"光线更接近Vermeer的柔和窗光，还是《银翼杀手》的霓虹split lighting？"
+7. This is the LAST round of questions. Cover ALL remaining professional dimensions. Don't hold anything back.]"""
     elif round_num >= 3:
         # Inject the good_example as quality benchmark for final prompt
         output_struct = expert.get("output_structure", {})
@@ -222,9 +231,9 @@ def build_round_context(domain: str, round_num: int) -> str:
             density_block = domain_density
         else:
             density_block = """## 密度硬性要求：
-- 每个章节至少80字，要有具体细节不是笼统描述
-- Negative：至少分3类，每类至少4项，共至少15个禁止项
-- 总长度：至少1200字"""
+- 每个章节至少120字，要有具体细节不是笼统描述
+- Negative：至少分3类，每类至少5项，共至少18个禁止项
+- 总长度：至少2000字。写到2000字之前不要停！"""
 
         density_rules = f"""
 [SYSTEM: This is the FINAL round. You MUST set prompt_ready=true and generate final_prompt NOW. No more questions.
@@ -259,11 +268,12 @@ def build_round_context(domain: str, round_num: int) -> str:
 - Negative Prompt必须针对当前场景定制，不是通用模板
 
 ## ⚠️ 长度硬性要求（这是最重要的规则之一）：
-- 你的final_prompt必须至少{target_len}字
+- 你的final_prompt必须至少{max(target_len, 2000)}字
 - 质量标杆有{len(good_example)}字——你的输出不能比它短
 - 如果你发现自己写完了但总字数不够，立刻给每个章节补充更多具体细节——加形容词、加材质描写、加参考对标、加具体数值
-- 宁可写2500字的专业prompt也不要写1000字的敷衍prompt
+- 宁可写3000字的专业prompt也不要写1500字的敷衍prompt
 - 每写完一个章节都检查一下它的密度——如果整个章节只有两三句话，说明你太敷衍了
+- 2000字是最低要求！每个章节至少150字！
 
 {round_text}]"""
         return density_rules
@@ -336,12 +346,14 @@ amateur prompt vs professional prompt的差距：
 - 问题中用真实品牌/作品做锚点：Apple、Nike、Pixar、苹果官网、杜蕾斯文案、Notion、Stripe。
 
 ## ⚠️ 选项质量规则：
+- 每个问题必须有3-5个选项。2个选项太少！用户需要足够的选择空间。
 - label: ≤6个字，清晰分类
-- description: 不是字典定义！是一个让用户脑海浮现画面的微场景。
+- description: 不是字典定义！是一个让用户脑海浮现画面的微场景，用具体品牌/作品做锚点。
 - ❌ 差：{"label": "产品展示", "description": "展示某个产品的功能与特点"}
 - ✅ 好：{"label": "产品展示", "description": "像Apple发布会那样——一个产品从黑暗中缓缓旋转出现，每个细节特写，配合精准的文字节奏"}
 - ❌ 差：{"label": "感动", "description": "让观众感受到情感的共鸣"}
 - ✅ 好：{"label": "感动", "description": "像Pixar《UP》开头——不说一句话，用画面让人安静流泪"}
+- 最后一个选项可以是"其他 / 让我自己描述"让用户自由输入
 
 ## 流程 — 2轮提问 + 1轮生成（共3轮，不要拖到4轮！）：
 
@@ -679,9 +691,24 @@ async def chat(request: Request):
     round_guidance = build_round_context(domain, user_turn_count)
 
     # For Round 1, add input-depth-adaptive guidance
+    is_detailed = True  # default for Round 2+
     if user_turn_count == 1:
-        msg_len = len(user_message.strip())
         expert = DOMAIN_EXPERTS.get(domain, DOMAIN_EXPERTS.get("general", {}))
+
+        # Smarter input depth detection:
+        # Chinese characters carry ~3x the information density of English chars.
+        # Count "information units": CJK chars count as 2.5, others as 1.
+        stripped = user_message.strip()
+        info_units = sum(2.5 if '一' <= c <= '鿿' else 1 for c in stripped)
+        # Also check for specificity signals: proper nouns, style keywords, scene descriptions
+        specificity_keywords = [
+            "风格", "赛博", "cyberpunk", "像", "类似", "参考", "色调", "氛围",
+            "场景", "角色", "背景", "颜色", "材质", "品牌", "产品",
+            "故事", "剧情", "分镜", "镜头", "构图", "光线", "光影",
+        ]
+        has_specifics = any(kw in stripped.lower() for kw in specificity_keywords)
+        # Input is "detailed" if high info density OR contains specific creative keywords
+        is_detailed = info_units >= 40 or has_specifics
 
         # Build domain-specific vague options
         vague_options = {
@@ -695,15 +722,16 @@ async def chat(request: Request):
 
         # Build domain-specific detail prompts
         detail_hints = {
-            "video": "ask about character appearance details (materials, colors, textures, wear/damage), environment specifics (objects, time of day, weather), and the precise nature of the mood.",
-            "design": "ask about the core visual concept, specific colors (not just 'blue' but what shade), layout preferences, typography personality, and references they like or dislike.",
-            "writing": "ask about the specific message, target reader's current state vs desired state, tone (give a reference person/brand voice), and what cliches to avoid.",
-            "code": "ask about the core user flow step by step, data model, tech stack preferences, scale/performance requirements, and what they explicitly DON'T want.",
-            "general": "ask about specific details they haven't mentioned yet.",
+            "video": "直接深入专业细节：镜头语言（机位、运镜、景深）、声音设计（环境音层次、音乐风格）、剪辑节奏（快切还是长镜头）、色彩调性（冷暖、饱和度）。每个问题必须有3-4个选项，每个选项用具体品牌/作品做锚点。",
+            "image": "直接深入专业细节：构图视角（镜头焦距感、仰视/俯视/平视）、光线方向和色温（侧光/逆光/顶光，暖调/冷调）、风格媒介（照片级/油画级/插画级，具体参考艺术家）、色彩调色盘（具体hex色值或电影色调参考）。每个问题必须有3-4个选项。",
+            "design": "直接深入专业细节：视觉概念（具体色值不是'蓝色'）、字体性格（参考品牌字体）、布局偏好（参考网站/App）。每个问题必须有3-4个选项。",
+            "writing": "直接深入专业细节：目标读者的现状vs理想状态、语气人设（参考具体人/品牌的说话方式）、要避免的套路和禁区。每个问题必须有3-4个选项。",
+            "code": "直接深入专业细节：核心用户流step by step、数据模型、技术栈偏好、规模/性能要求、明确不想要什么。每个问题必须有3-4个选项。",
+            "general": "直接深入用户没提到的具体细节。每个问题必须有3-4个选项。",
         }
         domain_detail = detail_hints.get(domain, detail_hints["general"])
 
-        if msg_len < 30:
+        if not is_detailed:
             # Check if domain has preset questions for vague inputs
             preset = expert.get("round1_preset_vague")
             if preset:
@@ -729,7 +757,16 @@ async def chat(request: Request):
 
             round_guidance += f"\n[INPUT_DEPTH: VAGUE — user said very little. Ask: 1) What specifically is this about? ({domain_opts}), 2) Do you have any specific picture/idea in mind? (open text with good placeholder), 3) What's the core goal/feeling? Do NOT ask about expert-level details yet — the user hasn't told you enough.]"
         else:
-            round_guidance += f"\n[INPUT_DEPTH: DETAILED — user already told you a lot. Do NOT repeat their information back as questions — that's insulting. They already told you the topic and mood. Instead {domain_detail} NEVER ask 'what is this about' or 'what feeling' when they already told you.]"
+            # Detailed input: user already gave specifics, jump straight to expert-level questions
+            round_guidance += f"""\n[INPUT_DEPTH: DETAILED — user already gave specific information. CRITICAL RULES:
+1. NEVER repeat or rephrase what the user already told you. If they said '赛博朋克东京街景下雨', do NOT ask 'what style' or 'what scene' or 'what weather' — they already told you.
+2. Jump to the NEXT LEVEL of detail — the expert dimensions they HAVEN'T covered yet.
+3. {domain_detail}
+4. Each question MUST have 3-4 options minimum, each option with vivid description using specific brand/work references.
+5. The user's message is: "{user_message[:200]}". Extract what they already decided, then ask about everything ELSE.
+6. Your intro should prove you understood: reference their specific idea, then pivot to what's missing.
+7. EXAMPLE of what NOT to do: User says '赛博朋克东京' → you ask '什么风格？' ← This is TERRIBLE. They already said the style.
+8. EXAMPLE of what TO do: User says '赛博朋克东京' → you ask '这个赛博朋克东京的光线是《银翼杀手》式的橙蓝split lighting，还是《攻壳机动队》式的冷绿色全息投影感？' ← This proves you understood AND goes deeper.]"""
 
     # Inject round guidance as a separate system message for cleaner context
     if round_guidance:
@@ -740,8 +777,11 @@ async def chat(request: Request):
 
     # Model selection logic
     if use_model == "hybrid":
-        # Smart mode: mini for round 1 only, 4o for round 2+ (better questions + generation)
-        active_model = "gpt-4o" if user_turn_count >= 2 else "gpt-4o-mini"
+        # Smart mode: use 4o for detailed Round 1 (quality questions matter), mini for vague Round 1
+        if user_turn_count == 1 and not is_detailed:
+            active_model = "gpt-4o-mini"
+        else:
+            active_model = "gpt-4o"  # 4o for detailed R1, all R2, and all R3
     elif use_model == "gpt-4o-mini" and user_turn_count >= 3:
         # Even in Fast mode, use 4o for final prompt generation — quality matters most here
         active_model = "gpt-4o"
@@ -800,15 +840,17 @@ async def chat(request: Request):
         fp = "\n\n".join(str(item) for item in fp)
 
     # Auto-expand if final_prompt is too short, retry up to 2 times
+    # Auto-expand if too short: 2000 chars minimum for quality prompts
     expand_attempts = 0
-    while fp and data.get("prompt_ready") and len(fp) < 1500 and user_turn_count >= 3 and expand_attempts < 2:
+    while fp and data.get("prompt_ready") and len(fp) < 2000 and user_turn_count >= 3 and expand_attempts < 2:
         expand_attempts += 1
         print(f"  ⚠️ Final prompt too short ({len(fp)} chars). Expansion attempt {expand_attempts}...")
-        expand_msg = f"""你的final_prompt只有{len(fp)}字，严重不足！目标是至少1500字。请重新生成，这次必须：
-1. 每个章节至少写100-250字的详细描述，不是两三句话就结束
+        expand_msg = f"""你的final_prompt只有{len(fp)}字，严重不足！目标是至少2000字。请重新生成，这次必须：
+1. 每个章节至少写150-300字的详细描述，不是两三句话就结束
 2. 加入更多具体的形容词、材质描写、颜色描写、空间关系、品牌参考
 3. Negative部分至少列18个具体禁止项，分3类
-4. 总长度必须超过1500字——这是硬性要求
+4. 总长度必须超过2000字——这是硬性要求
+5. 重新看一遍质量标杆，你的每个章节密度必须至少达到标杆的水平
 请重新输出完整的JSON，保持同样的格式。"""
         msgs.append({"role": "user", "content": expand_msg})
 
