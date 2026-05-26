@@ -1113,7 +1113,7 @@ async function ratePrompt(promptId, rating, btn) {
     await fetch(`/api/prompts/${promptId}/rate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rating: newRating }),
+      body: JSON.stringify({ rating: newRating, user_id: userId }),
     });
     // Update UI
     upBtn.classList.remove('active-up');
@@ -1124,13 +1124,26 @@ async function ratePrompt(promptId, rating, btn) {
 }
 
 // ===== Share prompt =====
-function sharePrompt(promptId, btn) {
-  const url = `${location.origin}/prompt/${promptId}`;
-  navigator.clipboard.writeText(url).then(() => {
+async function sharePrompt(promptId, btn) {
+  const original = btn.innerHTML;
+  btn.innerHTML = '&#8987;...';
+  try {
+    const res = await fetch(`/api/prompts/${promptId}/share`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to create share link');
+    const url = `${location.origin}${data.url}`;
+    await navigator.clipboard.writeText(url);
     btn.innerHTML = '&#10004; Link copied!';
     btn.classList.add('copied');
     setTimeout(() => { btn.innerHTML = '&#128279; Share Link'; btn.classList.remove('copied'); }, 2000);
-  });
+  } catch (err) {
+    btn.innerHTML = original;
+    showError(err.message || 'Failed to create share link');
+  }
 }
 
 async function toggleGalleryPublish(promptId, isPublic, btn, rewire = true) {
@@ -1140,7 +1153,7 @@ async function toggleGalleryPublish(promptId, isPublic, btn, rewire = true) {
     const res = await fetch(`/api/prompts/${promptId}/publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_public: isPublic }),
+      body: JSON.stringify({ is_public: isPublic, user_id: userId }),
     });
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to update gallery');
@@ -1236,7 +1249,7 @@ async function loadLibrary() {
 // ===== Prompt modal =====
 async function openPrompt(id) {
   try {
-    const res = await fetch(`/api/prompts/${id}`);
+    const res = await fetch(`/api/prompts/${id}?user_id=${userId}`);
     const p = await res.json();
     if (p.error) return;
 
@@ -1296,7 +1309,7 @@ async function loadSession(id) {
     return;
   }
   try {
-    const res = await fetch(`/api/session/${id}`);
+    const res = await fetch(`/api/session/${id}?user_id=${userId}`);
     const data = await res.json();
     if (data.error || !data.messages?.length) {
       // Just switch context
@@ -1538,13 +1551,14 @@ function dismissOnboarding() {
 async function handleRemix() {
   const params = new URLSearchParams(window.location.search);
   const remixId = params.get('remix');
+  const token = params.get('token') || '';
   if (!remixId) return false;
 
   // Clean URL
   window.history.replaceState({}, '', '/');
 
   try {
-    const res = await fetch(`/api/prompts/${remixId}`);
+    const res = await fetch(`/api/prompts/${remixId}?token=${encodeURIComponent(token)}`);
     const p = await res.json();
     if (p.error || !p.summary) return false;
 

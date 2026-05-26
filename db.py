@@ -6,6 +6,7 @@ Set DATABASE_URL env var for PostgreSQL; falls back to SQLite automatically.
 from __future__ import annotations
 
 import os
+import secrets
 import sqlite3
 import time
 from pathlib import Path
@@ -46,6 +47,10 @@ if DATABASE_URL:
         INSERT INTO sessions (id, user_id, domain, model, first_message, created_at, updated_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT(id) DO UPDATE SET
+            user_id = CASE
+                WHEN sessions.user_id = '' THEN EXCLUDED.user_id
+                ELSE sessions.user_id
+            END,
             domain = EXCLUDED.domain,
             model = EXCLUDED.model,
             first_message = CASE
@@ -81,6 +86,10 @@ else:
         INSERT INTO sessions (id, user_id, domain, model, first_message, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
+            user_id = CASE
+                WHEN sessions.user_id = '' THEN excluded.user_id
+                ELSE sessions.user_id
+            END,
             domain = excluded.domain,
             model = excluded.model,
             first_message = CASE
@@ -132,6 +141,7 @@ def init_db() -> None:
             char_count INTEGER DEFAULT 0,
             section_count INTEGER DEFAULT 0,
             is_public INTEGER DEFAULT 0,
+            share_token TEXT DEFAULT '',
             created_at {_REAL_TYPE} NOT NULL,
             deleted_at {_REAL_TYPE},
             FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
@@ -157,6 +167,13 @@ def init_db() -> None:
         cur.execute("ALTER TABLE prompts ADD COLUMN is_public INTEGER DEFAULT 0")
         conn.commit()
         print("Migration: added is_public column to prompts")
+    except Exception:
+        conn.rollback()  # column already exists
+
+    try:
+        cur.execute("ALTER TABLE prompts ADD COLUMN share_token TEXT DEFAULT ''")
+        conn.commit()
+        print("Migration: added share_token column to prompts")
     except Exception:
         conn.rollback()  # column already exists
 
@@ -216,10 +233,13 @@ def update_session(session_id: str) -> None:
     conn.close()
 
 
-def get_session(session_id: str) -> dict | None:
+def get_session(session_id: str, user_id: str = "") -> dict | None:
     conn = _connect()
     cur = conn.cursor()
-    cur.execute(f"SELECT * FROM sessions WHERE id = {_PH}", (session_id,))
+    if user_id:
+        cur.execute(f"SELECT * FROM sessions WHERE id = {_PH} AND user_id = {_PH}", (session_id, user_id))
+    else:
+        cur.execute(f"SELECT * FROM sessions WHERE id = {_PH}", (session_id,))
     result = _row_to_dict(cur)
     cur.close()
     conn.close()
@@ -281,13 +301,23 @@ def save_message(session_id: str, role: str, content: str, turn_number: int = 0)
     conn.close()
 
 
-def get_session_messages(session_id: str) -> list[dict]:
+def get_session_messages(session_id: str, user_id: str = "") -> list[dict]:
     conn = _connect()
     cur = conn.cursor()
-    cur.execute(
-        f"SELECT role, content, turn_number FROM messages WHERE session_id = {_PH} ORDER BY id",
-        (session_id,),
-    )
+    if user_id:
+        cur.execute(
+            f"""SELECT m.role, m.content, m.turn_number
+            FROM messages m
+            JOIN sessions s ON s.id = m.session_id
+            WHERE m.session_id = {_PH} AND s.user_id = {_PH}
+            ORDER BY m.id""",
+            (session_id, user_id),
+        )
+    else:
+        cur.execute(
+            f"SELECT role, content, turn_number FROM messages WHERE session_id = {_PH} ORDER BY id",
+            (session_id,),
+        )
     result = _rows_to_dicts(cur)
     cur.close()
     conn.close()
@@ -401,24 +431,51 @@ def get_gallery_prompts(limit: int = 30, offset: int = 0, domain: str | None = N
     return result
 
 
-def get_prompt(prompt_id: int) -> dict | None:
+def get_prompt(prompt_id: int, user_id: str = "", share_token: str = "") -> dict | None:
     conn = _connect()
     cur = conn.cursor()
-    cur.execute(
-        f"SELECT * FROM prompts WHERE id = {_PH} AND deleted_at IS NULL", (prompt_id,)
-    )
+    if user_id:
+        cur.execute(
+            f"""SELECT p.*
+            FROM prompts p
+            JOIN sessions s ON s.id = p.session_id
+            WHERE p.id = {_PH} AND p.deleted_at IS NULL AND s.user_id = {_PH}""",
+            (prompt_id, user_id),
+        )
+    elif share_token:
+        cur.execute(
+            f"""SELECT *
+            FROM prompts
+            WHERE id = {_PH} AND deleted_at IS NULL
+              AND (is_public = 1 OR share_token = {_PH})""",
+            (prompt_id, share_token),
+        )
+    else:
+        cur.execute(
+            f"SELECT * FROM prompts WHERE id = {_PH} AND deleted_at IS NULL AND is_public = 1",
+            (prompt_id,),
+        )
     result = _row_to_dict(cur)
     cur.close()
     conn.close()
     return result
 
 
-def delete_prompt(prompt_id: int) -> bool:
+def get_prompt_for_share(prompt_id: int, share_token: str = "") -> dict | None:
+    """Get a prompt for the public share page."""
+    return get_prompt(prompt_id, share_token=share_token)
+
+
+def delete_prompt(prompt_id: int, user_id: str = "") -> bool:
+    if not user_id:
+        return False
     conn = _connect()
     cur = conn.cursor()
     cur.execute(
-        f"UPDATE prompts SET deleted_at = {_PH} WHERE id = {_PH} AND deleted_at IS NULL",
-        (time.time(), prompt_id),
+        f"""UPDATE prompts SET deleted_at = {_PH}
+        WHERE id = {_PH} AND deleted_at IS NULL
+          AND session_id IN (SELECT id FROM sessions WHERE user_id = {_PH})""",
+        (time.time(), prompt_id, user_id),
     )
     conn.commit()
     affected = cur.rowcount
@@ -427,14 +484,18 @@ def delete_prompt(prompt_id: int) -> bool:
     return affected > 0
 
 
-def rate_prompt(prompt_id: int, rating: int) -> bool:
+def rate_prompt(prompt_id: int, rating: int, user_id: str = "") -> bool:
     """Rate a prompt: 1 = thumbs up, -1 = thumbs down, 0 = clear."""
+    if not user_id:
+        return False
     rating = max(-1, min(1, rating))
     conn = _connect()
     cur = conn.cursor()
     cur.execute(
-        f"UPDATE prompts SET rating = {_PH} WHERE id = {_PH} AND deleted_at IS NULL",
-        (rating, prompt_id),
+        f"""UPDATE prompts SET rating = {_PH}
+        WHERE id = {_PH} AND deleted_at IS NULL
+          AND session_id IN (SELECT id FROM sessions WHERE user_id = {_PH})""",
+        (rating, prompt_id, user_id),
     )
     conn.commit()
     affected = cur.rowcount
@@ -443,19 +504,59 @@ def rate_prompt(prompt_id: int, rating: int) -> bool:
     return affected > 0
 
 
-def set_prompt_public(prompt_id: int, is_public: bool) -> bool:
+def set_prompt_public(prompt_id: int, is_public: bool, user_id: str = "") -> bool:
     """Publish or unpublish a prompt from the public gallery."""
+    if not user_id:
+        return False
     conn = _connect()
     cur = conn.cursor()
     cur.execute(
-        f"UPDATE prompts SET is_public = {_PH} WHERE id = {_PH} AND deleted_at IS NULL",
-        (1 if is_public else 0, prompt_id),
+        f"""UPDATE prompts SET is_public = {_PH}
+        WHERE id = {_PH} AND deleted_at IS NULL
+          AND session_id IN (SELECT id FROM sessions WHERE user_id = {_PH})""",
+        (1 if is_public else 0, prompt_id, user_id),
     )
     conn.commit()
     affected = cur.rowcount
     cur.close()
     conn.close()
     return affected > 0
+
+
+def ensure_prompt_share_token(prompt_id: int, user_id: str = "") -> str | None:
+    """Create or return an unguessable share token for a user's prompt."""
+    if not user_id:
+        return None
+    conn = _connect()
+    cur = conn.cursor()
+    cur.execute(
+        f"""SELECT p.share_token
+        FROM prompts p
+        JOIN sessions s ON s.id = p.session_id
+        WHERE p.id = {_PH} AND p.deleted_at IS NULL AND s.user_id = {_PH}""",
+        (prompt_id, user_id),
+    )
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return None
+
+    token = row[0] if not isinstance(row, sqlite3.Row) else row["share_token"]
+    if token:
+        cur.close()
+        conn.close()
+        return token
+
+    token = secrets.token_urlsafe(24)
+    cur.execute(
+        f"UPDATE prompts SET share_token = {_PH} WHERE id = {_PH}",
+        (token, prompt_id),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return token
 
 
 # --- Subscribers ---

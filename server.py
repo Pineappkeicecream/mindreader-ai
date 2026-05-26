@@ -814,12 +814,12 @@ def _build_initial_system_message(domain: str, first_message: str, lang: str = "
     return base_prompt + lang_instruction + domain_context + kb_context
 
 
-def _restore_session_from_db(session_id: str) -> bool:
-    session = database.get_session(session_id)
+def _restore_session_from_db(session_id: str, user_id: str = "") -> bool:
+    session = database.get_session(session_id, user_id=user_id)
     if not session:
         return False
 
-    db_messages = database.get_session_messages(session_id)
+    db_messages = database.get_session_messages(session_id, user_id=user_id)
     if not db_messages:
         return False
 
@@ -844,6 +844,7 @@ def _restore_session_from_db(session_id: str) -> bool:
         "domain": domain,
         "model": session.get("model", "hybrid"),
         "lang": restored_lang,
+        "user_id": user_id,
     }
     print(f"Restored session {session_id[:8]}... | Domain: {domain} | Lang: {restored_lang} | Messages: {len(db_messages)}")
     return True
@@ -856,9 +857,9 @@ async def index():
 
 
 @app.get("/prompt/{prompt_id}", response_class=HTMLResponse)
-async def shared_prompt_page(prompt_id: int):
+async def shared_prompt_page(prompt_id: int, token: str = ""):
     """Shareable prompt page — standalone HTML with the prompt content."""
-    prompt = database.get_prompt(prompt_id)
+    prompt = database.get_prompt_for_share(prompt_id, token)
     if not prompt:
         return HTMLResponse("<h1>Prompt not found</h1>", status_code=404)
 
@@ -871,6 +872,10 @@ async def shared_prompt_page(prompt_id: int):
     fp = prompt.get("final_prompt", "")
     safe_fp = html_mod.escape(fp)
     # Basic markdown rendering in the template via JS
+
+    remix_href = f"/?remix={prompt_id}"
+    if token:
+        remix_href += f"&token={token}"
 
     return HTMLResponse(f"""<!DOCTYPE html>
 <html lang="en">
@@ -925,7 +930,7 @@ body{{margin:0;background:#09090b;color:#fafafa;min-height:100vh}}
     <button onclick="copyPrompt()" id="copyBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 text-sm font-semibold transition">Copy Prompt</button>
     <button onclick="copyFor('midjourney',this)" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition">&#127912; Midjourney</button>
     <button onclick="copyFor('chatgpt',this)" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition">&#128172; ChatGPT</button>
-    <a href="/?remix={prompt_id}" class="bg-purple-600 hover:bg-purple-500 text-white rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#128260; Remix</a>
+    <a href="{remix_href}" class="bg-purple-600 hover:bg-purple-500 text-white rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#128260; Remix</a>
     <a href="/" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#10024; Create Your Own</a>
     <a href="/gallery" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg px-4 py-2 text-sm font-semibold transition inline-block">&#128218; Gallery</a>
   </div>
@@ -1004,7 +1009,11 @@ async def chat(request: Request):
     if not user_message:
         return {"error": "Empty message"}
 
-    if session_id not in sessions and not _restore_session_from_db(session_id):
+    existing_user_id = sessions.get(session_id, {}).get("user_id", "")
+    if session_id in sessions and existing_user_id and existing_user_id != user_id:
+        return JSONResponse(status_code=403, content={"error": "Session does not belong to this user"})
+
+    if session_id not in sessions and not _restore_session_from_db(session_id, user_id=user_id):
         # Detect domain and language from user's first message
         detected_domain = detect_domain(user_message)
         detected_lang = detect_language(user_message)
@@ -1014,6 +1023,7 @@ async def chat(request: Request):
             "created_at": time.time(),
             "domain": detected_domain,
             "lang": detected_lang,
+            "user_id": user_id,
         }
         print(f"New session {session_id[:8]}... | Domain: {detected_domain} | Lang: {detected_lang}")
         database.save_session(session_id, detected_domain, use_model, user_message, user_id=user_id)
@@ -1297,6 +1307,8 @@ async def format_prompt(request: Request):
 @app.get("/api/history")
 async def history(user_id: str = ""):
     """Return recent prompts for sidebar (DB-backed)."""
+    if not user_id:
+        return []
     prompts = database.get_prompts(limit=20, user_id=user_id)
     items = []
     for p in prompts:
@@ -1319,23 +1331,25 @@ async def list_prompts(
     user_id: str = "",
 ):
     """Return saved prompts with pagination."""
+    if not user_id:
+        return []
     prompts = database.get_prompts(limit=limit, offset=offset, domain=domain, user_id=user_id)
     return prompts
 
 
 @app.get("/api/prompts/{prompt_id}")
-async def get_prompt(prompt_id: int):
+async def get_prompt(prompt_id: int, user_id: str = "", token: str = ""):
     """Get a specific prompt by ID."""
-    prompt = database.get_prompt(prompt_id)
+    prompt = database.get_prompt(prompt_id, user_id=user_id, share_token=token)
     if not prompt:
         return {"error": "Prompt not found"}
     return prompt
 
 
 @app.delete("/api/prompts/{prompt_id}")
-async def delete_prompt(prompt_id: int):
+async def delete_prompt(prompt_id: int, user_id: str = ""):
     """Soft-delete a prompt."""
-    ok = database.delete_prompt(prompt_id)
+    ok = database.delete_prompt(prompt_id, user_id=user_id)
     return {"ok": ok}
 
 
@@ -1344,7 +1358,8 @@ async def rate_prompt(prompt_id: int, request: Request):
     """Rate a prompt: 1 = thumbs up, -1 = thumbs down, 0 = clear."""
     body = await request.json()
     rating = body.get("rating", 0)
-    ok = database.rate_prompt(prompt_id, rating)
+    user_id = body.get("user_id", "")
+    ok = database.rate_prompt(prompt_id, rating, user_id=user_id)
     return {"ok": ok, "rating": rating}
 
 
@@ -1353,17 +1368,32 @@ async def publish_prompt(prompt_id: int, request: Request):
     """Publish or unpublish a prompt from the public gallery."""
     body = await request.json()
     is_public = bool(body.get("is_public", True))
-    ok = database.set_prompt_public(prompt_id, is_public)
+    user_id = body.get("user_id", "")
+    ok = database.set_prompt_public(prompt_id, is_public, user_id=user_id)
     return {"ok": ok, "is_public": is_public}
 
 
+@app.post("/api/prompts/{prompt_id}/share")
+async def share_prompt(prompt_id: int, request: Request):
+    """Create or return a private share URL for a prompt."""
+    body = await request.json()
+    user_id = body.get("user_id", "")
+    token = database.ensure_prompt_share_token(prompt_id, user_id=user_id)
+    if not token:
+        return JSONResponse(status_code=404, content={"error": "Prompt not found"})
+    return {"ok": True, "url": f"/prompt/{prompt_id}?token={token}", "token": token}
+
+
 @app.get("/api/session/{session_id}")
-async def get_session(session_id: str):
+async def get_session(session_id: str, user_id: str = ""):
     """Replay a session's messages from DB."""
-    db_msgs = database.get_session_messages(session_id)
+    db_msgs = database.get_session_messages(session_id, user_id=user_id)
     if not db_msgs:
         # Fallback to in-memory
         if session_id not in sessions:
+            return {"error": "Session not found"}
+        existing_user_id = sessions.get(session_id, {}).get("user_id", "")
+        if existing_user_id and existing_user_id != user_id:
             return {"error": "Session not found"}
         msgs = sessions[session_id]["messages"]
         db_msgs = [{"role": m["role"], "content": m["content"]} for m in msgs if m["role"] != "system"]
