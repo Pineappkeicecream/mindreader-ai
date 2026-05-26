@@ -265,6 +265,11 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
     <!-- Sessions list -->
     <div class="flex-1 overflow-y-auto py-2" id="sessionsPanel">
       <div class="px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Recent</div>
+      <div class="px-4 py-2 space-y-2" id="sessionsLoading">
+        <div class="h-8 bg-zinc-800/50 rounded-lg animate-pulse"></div>
+        <div class="h-8 bg-zinc-800/30 rounded-lg animate-pulse"></div>
+        <div class="h-8 bg-zinc-800/20 rounded-lg animate-pulse"></div>
+      </div>
     </div>
 
     <!-- Library list -->
@@ -400,7 +405,7 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
           Send
         </button>
       </form>
-      <div class="text-center text-[10px] text-zinc-700 mt-2" id="footerStats">Powered by expert prompts</div>
+      <div class="text-center text-[10px] text-zinc-700 mt-2" id="footerStats">Powered by expert prompts · <span class="hidden sm:inline">&#8984;N new session</span></div>
     </div>
 
   </div>
@@ -599,6 +604,11 @@ function addAiRound(data) {
         ${data.prompt_id ? `<span class="text-zinc-600 font-normal">#${data.prompt_id}</span>` : ''}
       </div>
       <div class="prompt-rendered" id="${promptId}">${renderMarkdown(data.final_prompt)}</div>
+      <div class="flex items-center gap-3 mt-2 mb-1 text-[10px] text-zinc-600">
+        <span>${(data.final_prompt.length/1000).toFixed(1)}k chars</span>
+        <span>${(data.final_prompt.match(/^## /gm)||[]).length} sections</span>
+        ${data.prompt_id ? `<span>ID #${data.prompt_id}</span>` : ''}
+      </div>
       <div class="export-bar">
         <button class="export-btn primary" onclick="copyRaw('${promptId}', this)">&#128203; Copy Raw</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','midjourney',this)">&#127912; Midjourney</button>
@@ -606,7 +616,10 @@ function addAiRound(data) {
         <button class="export-btn" onclick="copyForTool('${promptId}','dalle',this)">&#127748; DALL-E</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','sd',this)">&#129302; Stable Diffusion</button>
       </div>
-    </div>`;
+    </div>
+    <button onclick="resetChat()" class="mt-4 text-sm text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1.5 font-medium">
+      <span>+</span> Start a new creation
+    </button>`;
 
     // Store raw text for copy
     if (!window._promptTexts) window._promptTexts = {};
@@ -755,6 +768,8 @@ async function submitAnswers(roundId) {
 
 // ===== Typing indicator =====
 function showTyping() {
+  const typingMsgs = ['Reading your mind...', 'Analyzing your vision...', 'Crafting expert questions...', 'Generating your perfect prompt...'];
+  const typingMsg = turnCount >= 2 ? typingMsgs[3] : turnCount >= 1 ? typingMsgs[2] : typingMsgs[0];
   const div = document.createElement('div');
   div.id = 'typingIndicator';
   div.className = 'fade-in flex justify-start';
@@ -770,7 +785,7 @@ function showTyping() {
       <span class="typing-dot w-2 h-2 rounded-full bg-indigo-400"></span>
       <span class="typing-dot w-2 h-2 rounded-full bg-indigo-400"></span>
       <span class="typing-dot w-2 h-2 rounded-full bg-indigo-400"></span>
-      <span class="ml-2 text-xs text-zinc-500">Reading your mind...</span>
+      <span class="ml-2 text-xs text-zinc-500">${typingMsg}</span>
     </div>
   </div>`;
   messagesEl.appendChild(div);
@@ -1099,7 +1114,7 @@ const placeholders = [
 ];
 let phIdx = 0;
 setInterval(() => {
-  if (!currentSession && chatInput.value === '') {
+  if (turnCount === 0 && chatInput.value === '') {
     phIdx = (phIdx + 1) % placeholders.length;
     chatInput.placeholder = placeholders[phIdx];
   }

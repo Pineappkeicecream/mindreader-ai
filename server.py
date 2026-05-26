@@ -9,6 +9,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
@@ -89,6 +90,25 @@ def _get_client_ip(request: Request) -> str:
 
 
 app = FastAPI(title="MindReader AI")
+
+# CORS — allow the Railway domain and localhost
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Initialize database
