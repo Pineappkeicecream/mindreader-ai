@@ -145,6 +145,13 @@ def init_db() -> None:
     except Exception:
         conn.rollback()  # column already exists, ignore
 
+    try:
+        cur.execute("ALTER TABLE prompts ADD COLUMN rating INTEGER DEFAULT 0")
+        conn.commit()
+        print("Migration: added rating column to prompts")
+    except Exception:
+        conn.rollback()  # column already exists
+
     # Create indexes (IF NOT EXISTS works in both SQLite and PostgreSQL 9.5+)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, updated_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, turn_number)")
@@ -335,6 +342,22 @@ def delete_prompt(prompt_id: int) -> bool:
     return affected > 0
 
 
+def rate_prompt(prompt_id: int, rating: int) -> bool:
+    """Rate a prompt: 1 = thumbs up, -1 = thumbs down, 0 = clear."""
+    rating = max(-1, min(1, rating))
+    conn = _connect()
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE prompts SET rating = {_PH} WHERE id = {_PH} AND deleted_at IS NULL",
+        (rating, prompt_id),
+    )
+    conn.commit()
+    affected = cur.rowcount
+    cur.close()
+    conn.close()
+    return affected > 0
+
+
 # --- Stats ---
 
 def get_stats() -> dict:
@@ -344,6 +367,15 @@ def get_stats() -> dict:
     prompt_count = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM sessions")
     session_count = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM prompts WHERE deleted_at IS NULL AND rating = 1")
+    thumbs_up = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM prompts WHERE deleted_at IS NULL AND rating = -1")
+    thumbs_down = cur.fetchone()[0]
     cur.close()
     conn.close()
-    return {"prompt_count": prompt_count, "session_count": session_count}
+    return {
+        "prompt_count": prompt_count,
+        "session_count": session_count,
+        "thumbs_up": thumbs_up,
+        "thumbs_down": thumbs_down,
+    }

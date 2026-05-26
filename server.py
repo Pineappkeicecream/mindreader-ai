@@ -977,6 +977,15 @@ async def delete_prompt(prompt_id: int):
     return {"ok": ok}
 
 
+@app.post("/api/prompts/{prompt_id}/rate")
+async def rate_prompt(prompt_id: int, request: Request):
+    """Rate a prompt: 1 = thumbs up, -1 = thumbs down, 0 = clear."""
+    body = await request.json()
+    rating = body.get("rating", 0)
+    ok = database.rate_prompt(prompt_id, rating)
+    return {"ok": ok, "rating": rating}
+
+
 @app.get("/api/session/{session_id}")
 async def get_session(session_id: str):
     """Replay a session's messages from DB."""
@@ -1012,6 +1021,8 @@ async def stats():
         "saved_prompts": db_stats["prompt_count"],
         "sessions": db_stats["session_count"],
         "domains": len(DOMAIN_EXPERTS),
+        "thumbs_up": db_stats.get("thumbs_up", 0),
+        "thumbs_down": db_stats.get("thumbs_down", 0),
     }
 
 

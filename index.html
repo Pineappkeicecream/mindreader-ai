@@ -125,6 +125,18 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
 .export-btn.primary:hover{background:#3b82f6}
 .export-btn.copied{background:#10b981;border-color:#10b981;color:#fff}
 
+/* Rating buttons */
+.rating-bar{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #1e2d4a}
+.rate-btn{
+  background:none;border:1px solid #27272a;border-radius:8px;
+  padding:5px 12px;font-size:13px;cursor:pointer;transition:all .2s;
+  color:#71717a;display:flex;align-items:center;gap:4px;
+}
+.rate-btn:hover{border-color:#6366f1;color:#e0e7ff}
+.rate-btn.active-up{border-color:#10b981;color:#10b981;background:#10b98110}
+.rate-btn.active-down{border-color:#ef4444;color:#ef4444;background:#ef444410}
+.rate-label{font-size:11px;color:#52525b}
+
 .continue-btn{
   background:#6366f1;color:#fff;border:none;
   padding:10px 24px;border-radius:12px;font-size:14px;
@@ -627,6 +639,11 @@ function addAiRound(data) {
         <button class="export-btn" onclick="copyForTool('${promptId}','sd',this)">&#129302; Stable Diffusion</button>
         ${data.prompt_id ? `<button class="export-btn" onclick="sharePrompt(${data.prompt_id},this)">&#128279; Share Link</button>` : ''}
       </div>
+      ${data.prompt_id ? `<div class="rating-bar">
+        <span class="rate-label">How's this prompt?</span>
+        <button class="rate-btn" id="rate-up-${data.prompt_id}" onclick="ratePrompt(${data.prompt_id},1,this)">&#128077;</button>
+        <button class="rate-btn" id="rate-down-${data.prompt_id}" onclick="ratePrompt(${data.prompt_id},-1,this)">&#128078;</button>
+      </div>` : ''}
     </div>
     <button onclick="resetChat()" class="mt-4 text-sm text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1.5 font-medium">
       <span>+</span> Start a new creation
@@ -862,6 +879,29 @@ async function copyForTool(promptId, tool, btn) {
     btn.innerHTML = '&#10004; Raw copied';
     setTimeout(() => { btn.innerHTML = btn.dataset.orig || btn.innerHTML; }, 2000);
   }
+}
+
+// ===== Rate prompt =====
+async function ratePrompt(promptId, rating, btn) {
+  const upBtn = document.getElementById(`rate-up-${promptId}`);
+  const downBtn = document.getElementById(`rate-down-${promptId}`);
+  // Toggle: if already active, clear rating
+  const isActive = (rating === 1 && upBtn.classList.contains('active-up')) ||
+                   (rating === -1 && downBtn.classList.contains('active-down'));
+  const newRating = isActive ? 0 : rating;
+
+  try {
+    await fetch(`/api/prompts/${promptId}/rate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: newRating }),
+    });
+    // Update UI
+    upBtn.classList.remove('active-up');
+    downBtn.classList.remove('active-down');
+    if (newRating === 1) upBtn.classList.add('active-up');
+    if (newRating === -1) downBtn.classList.add('active-down');
+  } catch {}
 }
 
 // ===== Share prompt =====
@@ -1112,8 +1152,11 @@ async function loadStats() {
   try {
     const res = await fetch('/api/stats');
     const s = await res.json();
-    document.getElementById('sidebarStats').textContent =
-      `${s.kb_prompts.toLocaleString()} KB prompts · ${s.saved_prompts} saved · ${s.sessions} sessions`;
+    const ratingText = (s.thumbs_up || s.thumbs_down)
+      ? ` · ${s.thumbs_up || 0}&#128077; ${s.thumbs_down || 0}&#128078;`
+      : '';
+    document.getElementById('sidebarStats').innerHTML =
+      `${s.kb_prompts.toLocaleString()} KB prompts · ${s.saved_prompts} saved · ${s.sessions} sessions${ratingText}`;
     document.getElementById('footerStats').textContent =
       `Powered by ${s.kb_prompts.toLocaleString()} expert prompts · ${s.saved_prompts} prompts generated`;
   } catch {}
