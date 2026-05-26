@@ -137,6 +137,14 @@ def init_db() -> None:
         )
     """)
 
+    # --- Migrations: add columns to existing tables ---
+    try:
+        cur.execute("ALTER TABLE sessions ADD COLUMN user_id TEXT NOT NULL DEFAULT ''")
+        conn.commit()
+        print("Migration: added user_id column to sessions")
+    except Exception:
+        conn.rollback()  # column already exists, ignore
+
     # Create indexes (IF NOT EXISTS works in both SQLite and PostgreSQL 9.5+)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id, updated_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, turn_number)")
