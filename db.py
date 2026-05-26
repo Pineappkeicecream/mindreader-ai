@@ -316,6 +316,36 @@ def get_prompts(limit: int = 20, offset: int = 0, domain: str | None = None) -> 
     return result
 
 
+def get_gallery_prompts(limit: int = 30, offset: int = 0, domain: str | None = None) -> list[dict]:
+    """Get prompts for the public gallery — ordered by rating then recency."""
+    conn = _connect()
+    cur = conn.cursor()
+    if domain:
+        cur.execute(
+            f"""SELECT id, session_id, summary, domain, preview_text, char_count, section_count,
+                       rating, created_at
+            FROM prompts
+            WHERE deleted_at IS NULL AND domain = {_PH} AND char_count >= 500
+            ORDER BY rating DESC, created_at DESC
+            LIMIT {_PH} OFFSET {_PH}""",
+            (domain, limit, offset),
+        )
+    else:
+        cur.execute(
+            f"""SELECT id, session_id, summary, domain, preview_text, char_count, section_count,
+                       rating, created_at
+            FROM prompts
+            WHERE deleted_at IS NULL AND char_count >= 500
+            ORDER BY rating DESC, created_at DESC
+            LIMIT {_PH} OFFSET {_PH}""",
+            (limit, offset),
+        )
+    result = _rows_to_dicts(cur)
+    cur.close()
+    conn.close()
+    return result
+
+
 def get_prompt(prompt_id: int) -> dict | None:
     conn = _connect()
     cur = conn.cursor()

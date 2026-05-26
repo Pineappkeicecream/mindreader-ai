@@ -23,8 +23,8 @@ Target: 1000 daily active users within 3 months.
 - [x] Smart input depth detection (CJK-aware)
 - [x] English language support (i18n)
 - [x] Better onboarding — first-time user tutorial overlay
-- [ ] Prompt rating system (thumbs up/down)
-- [ ] Session naming (auto-generate from first message)
+- [x] Prompt rating system (thumbs up/down)
+- [x] Session naming (auto-generate from first message)
 
 ## Phase 2: Growth Features (Week 2-4)
 **Goal: Give users reasons to come back and share**
