@@ -8,12 +8,12 @@
 <meta name="theme-color" content="#4F46E5">
 <!-- Open Graph / Social sharing -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="MindReader AI — 读心术 Prompt 生成器">
+<meta property="og:title" content="MindReader AI — AI Prompt Generator">
 <meta property="og:description" content="Describe your idea, even vaguely. AI experts will read your mind and generate the perfect prompt.">
 <meta property="og:url" content="https://web-production-3e4e9.up.railway.app">
 <meta property="og:image" content="https://web-production-3e4e9.up.railway.app/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MindReader AI — 读心术 Prompt 生成器">
+<meta name="twitter:title" content="MindReader AI — AI Prompt Generator">
 <meta name="twitter:description" content="Describe your idea, even vaguely. AI experts will read your mind and generate the perfect prompt.">
 <!-- Favicon (inline SVG as data URI) -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F46E5'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23C7D2FE' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23E0E7FF'/%3E%3C/svg%3E">
@@ -270,11 +270,11 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
         </svg>
         <div>
           <div class="text-sm font-bold text-white">MindReader AI</div>
-          <div class="text-[9px] text-zinc-600 font-medium">READ MIND. WRITE PROMPT.</div>
+          <div class="text-[9px] text-zinc-600 font-medium" id="sidebarTagline">READ MIND. WRITE PROMPT.</div>
         </div>
       </div>
-      <button onclick="resetChat()" class="w-full text-[12px] text-zinc-400 hover:text-white border border-zinc-700 rounded-lg px-3 py-2 transition hover:border-indigo-500 hover:bg-indigo-600/10 flex items-center justify-center gap-1.5">
-        <span>+</span> New Session
+      <button id="newSessionBtn" onclick="resetChat()" class="w-full text-[12px] text-zinc-400 hover:text-white border border-zinc-700 rounded-lg px-3 py-2 transition hover:border-indigo-500 hover:bg-indigo-600/10 flex items-center justify-center gap-1.5">
+        + New Session
       </button>
     </div>
 
@@ -322,9 +322,13 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
     <header class="flex items-center justify-between px-5 py-3 border-b border-zinc-800/50">
       <div class="min-w-0 flex-1">
         <div class="text-[13px] font-semibold text-zinc-300 truncate" id="headerTitle">New Session</div>
-        <div class="text-[11px] text-zinc-600">Read your mind, write your prompt</div>
+        <div class="text-[11px] text-zinc-600" id="headerSub">Read your mind, write your prompt</div>
       </div>
       <div class="flex items-center gap-4 flex-shrink-0">
+        <div class="model-toggle">
+          <button class="lang-btn model-btn" data-lang="en" onclick="setUILang('en')" title="English">EN</button>
+          <button class="lang-btn model-btn" data-lang="zh" onclick="setUILang('zh')" title="中文">中文</button>
+        </div>
         <div class="model-toggle" id="modelToggle">
           <button class="model-btn" onclick="setModel('gpt-4o-mini',this)" title="Fast but less detailed">&#9889; Fast</button>
           <button class="model-btn active" onclick="setModel('hybrid',this)" title="Smart: fast questions + precise output">&#129504; Smart</button>
@@ -357,57 +361,57 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
           <circle cx="16" cy="16" r="2.5" fill="#E0E7FF"/>
           <path d="M16 8v3M16 21v3M8 16h3M21 16h3" stroke="#818CF8" stroke-width="1" stroke-linecap="round" opacity=".5"/>
         </svg>
-        <h1 class="text-2xl font-bold text-white mb-2">What do you want to create?</h1>
-        <p class="text-zinc-500 text-sm mb-2 max-w-md">
+        <h1 class="text-2xl font-bold text-white mb-2" id="welcomeTitle">What do you want to create?</h1>
+        <p class="text-zinc-500 text-sm mb-2 max-w-md" id="welcomeSubtitle">
           Describe your idea, even vaguely. I'll ask expert questions to read your mind, then generate the perfect prompt.
         </p>
         <!-- How it works -->
         <div class="welcome-how flex gap-6 mb-8 max-w-lg text-left" style="font-size:12px">
           <div class="flex-1">
-            <div style="color:#818cf8;font-weight:700;margin-bottom:2px">1. Describe</div>
-            <div style="color:#71717a">Tell me your idea, even a single sentence</div>
+            <div style="color:#818cf8;font-weight:700;margin-bottom:2px" id="howStep1">1. Describe</div>
+            <div style="color:#71717a" id="howStep1Desc">Tell me your idea, even a single sentence</div>
           </div>
           <div style="color:#3f3f46;align-self:center;font-size:16px">&#8594;</div>
           <div class="flex-1">
-            <div style="color:#818cf8;font-weight:700;margin-bottom:2px">2. Refine</div>
-            <div style="color:#71717a">I ask expert questions to understand your vision</div>
+            <div style="color:#818cf8;font-weight:700;margin-bottom:2px" id="howStep2">2. Refine</div>
+            <div style="color:#71717a" id="howStep2Desc">I ask expert questions to understand your vision</div>
           </div>
           <div style="color:#3f3f46;align-self:center;font-size:16px">&#8594;</div>
           <div class="flex-1">
-            <div style="color:#818cf8;font-weight:700;margin-bottom:2px">3. Generate</div>
-            <div style="color:#71717a">Get a perfect prompt for any AI tool</div>
+            <div style="color:#818cf8;font-weight:700;margin-bottom:2px" id="howStep3">3. Generate</div>
+            <div style="color:#71717a" id="howStep3Desc">Get a perfect prompt for any AI tool</div>
           </div>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-2xl">
-          <div class="suggestion" onclick="useSuggestion(this)">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-2xl" id="suggestionsGrid">
+          <div class="suggestion" onclick="useSuggestion('Video')">
             <div class="s-icon">&#127916;</div>
-            <div class="s-cat video">Video</div>
-            <div>Create a short video or animation</div>
+            <div class="s-cat video" id="sCatVideo">Video</div>
+            <div id="sDescVideo">Create a short video or animation</div>
           </div>
-          <div class="suggestion" onclick="useSuggestion(this)">
+          <div class="suggestion" onclick="useSuggestion('Image')">
             <div class="s-icon">&#127912;</div>
-            <div class="s-cat image">Image</div>
-            <div>Generate an AI image or illustration</div>
+            <div class="s-cat image" id="sCatImage">Image</div>
+            <div id="sDescImage">Generate an AI image or illustration</div>
           </div>
-          <div class="suggestion" onclick="useSuggestion(this)">
+          <div class="suggestion" onclick="useSuggestion('Design')">
             <div class="s-icon">&#127912;</div>
-            <div class="s-cat design">Design</div>
-            <div>Design a logo, UI, or poster</div>
+            <div class="s-cat design" id="sCatDesign">Design</div>
+            <div id="sDescDesign">Design a logo, UI, or poster</div>
           </div>
-          <div class="suggestion" onclick="useSuggestion(this)">
+          <div class="suggestion" onclick="useSuggestion('Writing')">
             <div class="s-icon">&#9997;&#65039;</div>
-            <div class="s-cat writing">Writing</div>
-            <div>Write copy, articles, or marketing</div>
+            <div class="s-cat writing" id="sCatWriting">Writing</div>
+            <div id="sDescWriting">Write copy, articles, or marketing</div>
           </div>
-          <div class="suggestion" onclick="useSuggestion(this)">
+          <div class="suggestion" onclick="useSuggestion('Code')">
             <div class="s-icon">&#128187;</div>
-            <div class="s-cat code">Code</div>
-            <div>Build a web app or tool</div>
+            <div class="s-cat code" id="sCatCode">Code</div>
+            <div id="sDescCode">Build a web app or tool</div>
           </div>
-          <div class="suggestion" onclick="useSuggestion(this)">
+          <div class="suggestion" onclick="useSuggestion('Other')">
             <div class="s-icon">&#10024;</div>
-            <div class="s-cat general">Other</div>
-            <div>Something else entirely</div>
+            <div class="s-cat general" id="sCatOther">Other</div>
+            <div id="sDescOther">Something else entirely</div>
           </div>
         </div>
       </div>
@@ -458,6 +462,143 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
 </div>
 
 <script>
+// ===== i18n =====
+const i18n = {
+  en: {
+    title: 'What do you want to create?',
+    subtitle: 'Describe your idea, even vaguely. I\'ll ask expert questions to read your mind, then generate the perfect prompt.',
+    step1: 'Describe', step1desc: 'Tell me your idea, even a single sentence',
+    step2: 'Refine', step2desc: 'I ask expert questions to understand your vision',
+    step3: 'Generate', step3desc: 'Get a perfect prompt for any AI tool',
+    newSession: '+ New Session',
+    sessions: 'Sessions', myPrompts: 'My Prompts',
+    recent: 'Recent', savedPrompts: 'Saved Prompts',
+    noSessions: 'No sessions yet', noPrompts: 'No prompts saved yet.',
+    noPromptsHint: 'Complete a session to save a prompt.',
+    send: 'Send', placeholder: 'Describe what you want to create...',
+    newSessionTitle: 'New Session',
+    tagline: 'READ MIND. WRITE PROMPT.',
+    headerSub: 'Read your mind, write your prompt',
+    fast: '⚡ Fast', smart: '🧠 Smart', pro: '🎯 Pro',
+    understand: 'Understand', deepDive: 'Deep Dive', generate: 'Generate',
+    multiSelect: 'Multi-select',
+    continueBtn: 'Continue →',
+    yourPrompt: '✨ Your Perfect Prompt',
+    copyRaw: '📋 Copy Raw', shareLink: '🔗 Share Link',
+    howsPrompt: "How's this prompt?",
+    startNew: '+ Start a new creation',
+    reading: 'Reading your mind...',
+    analyzing: 'Analyzing your vision...',
+    crafting: 'Crafting expert questions...',
+    generating: 'Generating your perfect prompt...',
+    footerPowered: 'Powered by expert prompts',
+    loadingStats: 'Loading stats...',
+    failedSessions: 'Failed to load sessions',
+    failedPrompts: 'Failed to load prompts',
+    networkError: 'Network error — check your connection',
+    timeout: 'Request timed out. Please try again.',
+    summary: '📋 What I understood from you',
+    // Suggestion cards
+    sVideo: 'Video', sVideoDesc: 'Create a short video or animation',
+    sImage: 'Image', sImageDesc: 'Generate an AI image or illustration',
+    sDesign: 'Design', sDesignDesc: 'Design a logo, UI, or poster',
+    sWriting: 'Writing', sWritingDesc: 'Write copy, articles, or marketing',
+    sCode: 'Code', sCodeDesc: 'Build a web app or tool',
+    sOther: 'Other', sOtherDesc: 'Something else entirely',
+    // Suggestion prompts (what gets submitted)
+    pVideo: 'I want to make a short video',
+    pImage: 'Generate an AI image',
+    pDesign: 'Help me design a logo',
+    pWriting: 'Help me write some copy',
+    pCode: 'Build a full-stack web app',
+    pOther: 'I have an idea I want AI to help with',
+    placeholders: [
+      "I want a cinematic video of a cat in space...",
+      "Design a minimal logo for my coffee brand...",
+      "Help me write a product launch email...",
+      "Generate a fantasy landscape illustration...",
+      "Build me a landing page for my startup...",
+      "I need a poster for a music festival...",
+      "Create an anime-style character portrait...",
+      "Write social media copy for a new app...",
+    ],
+  },
+  zh: {
+    title: '你想创造什么？',
+    subtitle: '描述你的想法，哪怕只是一句话。我会用专家级提问读懂你的想法，然后生成完美的prompt。',
+    step1: '描述', step1desc: '告诉我你的想法，哪怕只有一句话',
+    step2: '深挖', step2desc: '我会用专家级问题理解你的愿景',
+    step3: '生成', step3desc: '获得适用于任何AI工具的完美prompt',
+    newSession: '+ 新会话',
+    sessions: '会话', myPrompts: '我的Prompt',
+    recent: '最近', savedPrompts: '已保存的Prompt',
+    noSessions: '暂无会话', noPrompts: '暂无已保存的prompt',
+    noPromptsHint: '完成一次会话即可保存prompt。',
+    send: '发送', placeholder: '描述你想创造的东西...',
+    newSessionTitle: '新会话',
+    tagline: '读心术 · 写Prompt',
+    headerSub: '读懂你的想法，写出完美prompt',
+    fast: '⚡ 快速', smart: '🧠 智能', pro: '🎯 专业',
+    understand: '理解', deepDive: '深挖', generate: '生成',
+    multiSelect: '可多选',
+    continueBtn: '继续 →',
+    yourPrompt: '✨ 你的完美Prompt',
+    copyRaw: '📋 复制原文', shareLink: '🔗 分享链接',
+    howsPrompt: '这个prompt怎么样？',
+    startNew: '+ 开始新的创作',
+    reading: '正在读取你的想法...',
+    analyzing: '正在分析你的愿景...',
+    crafting: '正在构建专家问题...',
+    generating: '正在生成你的完美prompt...',
+    footerPowered: '由专业prompt驱动',
+    loadingStats: '加载中...',
+    failedSessions: '加载会话失败',
+    failedPrompts: '加载prompt失败',
+    networkError: '网络错误 — 请检查连接',
+    timeout: '请求超时，请重试。',
+    summary: '📋 我理解的内容',
+    sVideo: '视频', sVideoDesc: '创建短视频或动画',
+    sImage: '图片', sImageDesc: '生成AI图片或插画',
+    sDesign: '设计', sDesignDesc: '设计Logo、UI或海报',
+    sWriting: '文案', sWritingDesc: '撰写文案、文章或营销内容',
+    sCode: '代码', sCodeDesc: '开发Web应用或工具',
+    sOther: '其他', sOtherDesc: '其他任何想法',
+    pVideo: '我想做一个短视频',
+    pImage: '生成一张 AI 图片',
+    pDesign: '帮我设计一个 logo',
+    pWriting: '帮我写一段文案',
+    pCode: '开发一个全栈 Web 应用',
+    pOther: '我有一个想法想让AI帮我实现',
+    placeholders: [
+      "我想做一个猫在太空中的电影感视频...",
+      "帮我设计一个咖啡品牌的极简logo...",
+      "帮我写一封产品发布邮件...",
+      "生成一幅奇幻风景插画...",
+      "帮我做一个创业公司的落地页...",
+      "我需要一张音乐节海报...",
+      "创建一个动漫风格的角色肖像...",
+      "帮我写新App的社交媒体文案...",
+    ],
+  }
+};
+
+// Auto-detect language: check localStorage override, then browser language
+function detectUILang() {
+  const stored = localStorage.getItem('mr_lang');
+  if (stored && (stored === 'en' || stored === 'zh')) return stored;
+  const nav = navigator.language || navigator.userLanguage || 'en';
+  return nav.startsWith('zh') ? 'zh' : 'en';
+}
+
+let uiLang = detectUILang();
+function t(key) { return (i18n[uiLang] && i18n[uiLang][key]) || (i18n.en[key]) || key; }
+
+function setUILang(lang) {
+  uiLang = lang;
+  localStorage.setItem('mr_lang', lang);
+  applyI18n();
+}
+
 // ===== State =====
 const userId = localStorage.getItem('mr_user_id') || crypto.randomUUID();
 localStorage.setItem('mr_user_id', userId);
@@ -476,6 +617,48 @@ function setModel(model, btn) {
   document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active', 'pro'));
   btn.classList.add('active');
   if (model === 'gpt-4o') btn.classList.add('pro');
+}
+
+// ===== i18n application =====
+function applyI18n() {
+  // Welcome
+  const wt = document.getElementById('welcomeTitle'); if (wt) wt.textContent = t('title');
+  const ws = document.getElementById('welcomeSubtitle'); if (ws) ws.textContent = t('subtitle');
+  const hs1 = document.getElementById('howStep1'); if (hs1) hs1.textContent = '1. ' + t('step1');
+  const hs1d = document.getElementById('howStep1Desc'); if (hs1d) hs1d.textContent = t('step1desc');
+  const hs2 = document.getElementById('howStep2'); if (hs2) hs2.textContent = '2. ' + t('step2');
+  const hs2d = document.getElementById('howStep2Desc'); if (hs2d) hs2d.textContent = t('step2desc');
+  const hs3 = document.getElementById('howStep3'); if (hs3) hs3.textContent = '3. ' + t('step3');
+  const hs3d = document.getElementById('howStep3Desc'); if (hs3d) hs3d.textContent = t('step3desc');
+  // Suggestion cards
+  const cats = {Video:'sVideo',Image:'sImage',Design:'sDesign',Writing:'sWriting',Code:'sCode',Other:'sOther'};
+  const descs = {Video:'sVideoDesc',Image:'sImageDesc',Design:'sDesignDesc',Writing:'sWritingDesc',Code:'sCodeDesc',Other:'sOtherDesc'};
+  Object.keys(cats).forEach(k => {
+    const el = document.getElementById('sCat'+k); if (el) el.textContent = t(cats[k]);
+    const de = document.getElementById('sDesc'+k); if (de) de.textContent = t(descs[k]);
+  });
+  // Sidebar
+  const nb = document.getElementById('newSessionBtn'); if (nb) nb.textContent = t('newSession');
+  const ts = document.getElementById('tabSessions'); if (ts) ts.textContent = t('sessions');
+  const tl = document.getElementById('tabLibrary'); if (tl) tl.textContent = t('myPrompts');
+  // Header
+  if (turnCount === 0) {
+    const ht = document.getElementById('headerTitle'); if (ht) ht.textContent = t('newSessionTitle');
+  }
+  const hsub = document.getElementById('headerSub'); if (hsub) hsub.textContent = t('headerSub');
+  // Tagline
+  const tg = document.getElementById('sidebarTagline'); if (tg) tg.textContent = t('tagline');
+  // Input
+  if (chatInput && chatInput.value === '') chatInput.placeholder = t('placeholder');
+  const sb = document.getElementById('sendBtn'); if (sb) sb.textContent = t('send');
+  // Progress labels
+  const pl1 = document.getElementById('pl1'); if (pl1 && !pl1.classList.contains('done')) pl1.textContent = t('understand');
+  const pl2 = document.getElementById('pl2'); if (pl2 && !pl2.classList.contains('done')) pl2.textContent = t('deepDive');
+  const pl3 = document.getElementById('pl3'); if (pl3 && !pl3.classList.contains('done')) pl3.textContent = t('generate');
+  // Lang toggle active state
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === uiLang);
+  });
 }
 
 // ===== DOM refs =====
@@ -497,18 +680,9 @@ chatInput.addEventListener('keydown', e => {
 });
 
 // ===== Suggestion cards =====
-function useSuggestion(el) {
-  const cat = el.querySelector('.s-cat')?.textContent?.trim() || '';
-  const desc = el.childNodes[el.childNodes.length - 1]?.textContent?.trim() || '';
-  const prompts = {
-    'Video': '我想做一个短视频',
-    'Image': '生成一张 AI 图片',
-    'Design': '帮我设计一个 logo',
-    'Writing': '帮我写一段文案',
-    'Code': '开发一个全栈 Web 应用',
-    'Other': '我有一个想法想让AI帮我实现'
-  };
-  chatInput.value = prompts[cat] || desc;
+function useSuggestion(cat) {
+  const keyMap = { Video: 'pVideo', Image: 'pImage', Design: 'pDesign', Writing: 'pWriting', Code: 'pCode', Other: 'pOther' };
+  chatInput.value = t(keyMap[cat] || 'pOther');
   chatInput.dispatchEvent(new Event('input'));
   chatForm.requestSubmit();
 }
@@ -613,7 +787,7 @@ function addAiRound(data) {
     // Summary card
     if (data.summary) {
       html += `<div class="summary-card">
-        <div class="label">&#128203; What I understood from you</div>
+        <div class="label">${t('summary')}</div>
         <div class="text">${esc(data.summary)}</div>
       </div>`;
     }
@@ -622,7 +796,7 @@ function addAiRound(data) {
     const promptId = 'prompt-' + Date.now();
     html += `<div class="prompt-card">
       <div class="text-xs font-semibold text-emerald-400 mb-2 flex items-center gap-2">
-        &#10024; Your Perfect Prompt
+        ${t('yourPrompt')}
         ${data.prompt_id ? `<span class="text-zinc-600 font-normal">#${data.prompt_id}</span>` : ''}
       </div>
       <div class="prompt-rendered" id="${promptId}">${renderMarkdown(data.final_prompt)}</div>
@@ -632,21 +806,21 @@ function addAiRound(data) {
         ${data.prompt_id ? `<span>ID #${data.prompt_id}</span>` : ''}
       </div>
       <div class="export-bar">
-        <button class="export-btn primary" onclick="copyRaw('${promptId}', this)">&#128203; Copy Raw</button>
+        <button class="export-btn primary" onclick="copyRaw('${promptId}', this)">${t('copyRaw')}</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','midjourney',this)">&#127912; Midjourney</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','chatgpt',this)">&#128172; ChatGPT</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','dalle',this)">&#127748; DALL-E</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','sd',this)">&#129302; Stable Diffusion</button>
-        ${data.prompt_id ? `<button class="export-btn" onclick="sharePrompt(${data.prompt_id},this)">&#128279; Share Link</button>` : ''}
+        ${data.prompt_id ? `<button class="export-btn" onclick="sharePrompt(${data.prompt_id},this)">${t('shareLink')}</button>` : ''}
       </div>
       ${data.prompt_id ? `<div class="rating-bar">
-        <span class="rate-label">How's this prompt?</span>
+        <span class="rate-label">${t('howsPrompt')}</span>
         <button class="rate-btn" id="rate-up-${data.prompt_id}" onclick="ratePrompt(${data.prompt_id},1,this)">&#128077;</button>
         <button class="rate-btn" id="rate-down-${data.prompt_id}" onclick="ratePrompt(${data.prompt_id},-1,this)">&#128078;</button>
       </div>` : ''}
     </div>
     <button onclick="resetChat()" class="mt-4 text-sm text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1.5 font-medium">
-      <span>+</span> Start a new creation
+      ${t('startNew')}
     </button>`;
 
     // Store raw text for copy
@@ -680,9 +854,9 @@ function addAiRound(data) {
     data.questions.forEach((q, qi) => {
       const multi = q.multi_select !== false;
       const allowText = q.allow_text !== false;
-      const placeholder = q.text_placeholder || 'Add more details...';
+      const placeholder = q.text_placeholder || (uiLang === 'zh' ? '添加更多细节...' : 'Add more details...');
       html += `<div class="q-card" data-qi="${qi}" data-multi="${multi}">
-        <div class="q-label">${esc(q.question)}${multi ? '<span class="q-multi-badge">Multi-select</span>' : ''}</div>
+        <div class="q-label">${esc(q.question)}${multi ? '<span class="q-multi-badge">' + t('multiSelect') + '</span>' : ''}</div>
         <div class="q-options">`;
       (q.options || []).forEach((opt, oi) => {
         const label = typeof opt === 'string' ? opt : (opt.label || String(opt));
@@ -700,7 +874,7 @@ function addAiRound(data) {
       }
       html += `</div>`;
     });
-    html += `<button class="continue-btn" id="btn-${roundId}" onclick="submitAnswers('${roundId}')">Continue &#8594;</button>`;
+    html += `<button class="continue-btn" id="btn-${roundId}" onclick="submitAnswers('${roundId}')">${t('continueBtn')}</button>`;
     html += `</div>`;
   }
 
@@ -794,14 +968,14 @@ async function submitAnswers(roundId) {
     addAiRound(data);
   } catch (err) {
     hideTyping();
-    const msg = err.name === 'AbortError' ? 'Request timed out. Please try again.' : err.message;
+    const msg = err.name === 'AbortError' ? t('timeout') : err.message;
     showError(msg, () => submitAnswers(roundId));
   }
 }
 
 // ===== Typing indicator =====
 function showTyping() {
-  const typingMsgs = ['Reading your mind...', 'Analyzing your vision...', 'Crafting expert questions...', 'Generating your perfect prompt...'];
+  const typingMsgs = [t('reading'), t('analyzing'), t('crafting'), t('generating')];
   const typingMsg = turnCount >= 2 ? typingMsgs[3] : turnCount >= 1 ? typingMsgs[2] : typingMsgs[0];
   const div = document.createElement('div');
   div.id = 'typingIndicator';
@@ -837,7 +1011,7 @@ function showError(msg, retryFn) {
   const toast = document.createElement('div');
   toast.className = 'error-toast';
   const isNetwork = !msg || msg === 'Failed to fetch' || msg.includes('network') || msg.includes('NetworkError');
-  const displayMsg = isNetwork ? 'Network error — check your connection' : msg;
+  const displayMsg = isNetwork ? t('networkError') : msg;
   toast.innerHTML = `<span>&#9888; ${esc(displayMsg)}</span>
     ${retryFn ? '<button onclick="this.parentElement._retry()">Retry</button>' : ''}
     <button onclick="this.parentElement.remove()" style="background:#7f1d1d">&#10005;</button>`;
@@ -939,9 +1113,9 @@ async function loadSessions() {
   try {
     const res = await fetch(`/api/sessions?limit=30&user_id=${userId}`);
     const sessions = await res.json();
-    let html = '<div class="px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Recent</div>';
+    let html = `<div class="px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">${t('recent')}</div>`;
     if (!Array.isArray(sessions) || sessions.length === 0) {
-      html += '<div class="px-4 py-4 text-xs text-zinc-700 text-center">No sessions yet</div>';
+      html += `<div class="px-4 py-4 text-xs text-zinc-700 text-center">${t('noSessions')}</div>`;
     }
     (sessions || []).forEach(s => {
       const active = s.id === currentSession ? 'active' : '';
@@ -955,7 +1129,7 @@ async function loadSessions() {
     });
     panel.innerHTML = html;
   } catch {
-    panel.innerHTML = '<div class="px-4 py-4 text-xs text-red-400 text-center">Failed to load sessions</div>';
+    panel.innerHTML = `<div class="px-4 py-4 text-xs text-red-400 text-center">${t('failedSessions')}</div>`;
   }
 }
 
@@ -965,9 +1139,9 @@ async function loadLibrary() {
   try {
     const res = await fetch('/api/prompts?limit=30');
     const prompts = await res.json();
-    let html = '<div class="px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Saved Prompts</div>';
+    let html = `<div class="px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">${t('savedPrompts')}</div>`;
     if (prompts.length === 0) {
-      html += '<div class="px-4 py-4 text-xs text-zinc-700 text-center">No prompts saved yet.<br>Complete a session to save a prompt.</div>';
+      html += `<div class="px-4 py-4 text-xs text-zinc-700 text-center">${t('noPrompts')}<br>${t('noPromptsHint')}</div>`;
     }
     prompts.forEach(p => {
       const date = new Date(p.created_at * 1000);
@@ -986,7 +1160,7 @@ async function loadLibrary() {
     });
     panel.innerHTML = html;
   } catch {
-    panel.innerHTML = '<div class="px-4 py-4 text-xs text-red-400 text-center">Failed to load prompts</div>';
+    panel.innerHTML = `<div class="px-4 py-4 text-xs text-red-400 text-center">${t('failedPrompts')}</div>`;
   }
 }
 
@@ -1115,7 +1289,7 @@ chatForm.addEventListener('submit', async e => {
     addAiRound(data);
   } catch (err) {
     hideTyping();
-    const msg2 = err.name === 'AbortError' ? 'Request timed out. Please try again.' : err.message;
+    const msg2 = err.name === 'AbortError' ? t('timeout') : err.message;
     showError(msg2);
   }
   sendBtn.disabled = !chatInput.value.trim();
@@ -1137,7 +1311,7 @@ async function resetChat() {
   currentDomain = '';
   messagesEl.innerHTML = '';
   welcomeState.classList.remove('hidden');
-  document.getElementById('headerTitle').textContent = 'New Session';
+  document.getElementById('headerTitle').textContent = t('newSessionTitle');
   document.getElementById('progressContainer').classList.add('hidden');
   chatInput.value = '';
   chatInput.focus();
@@ -1157,8 +1331,9 @@ async function loadStats() {
       : '';
     document.getElementById('sidebarStats').innerHTML =
       `${s.kb_prompts.toLocaleString()} KB prompts · ${s.saved_prompts} saved · ${s.sessions} sessions${ratingText}`;
-    document.getElementById('footerStats').textContent =
-      `Powered by ${s.kb_prompts.toLocaleString()} expert prompts · ${s.saved_prompts} prompts generated`;
+    document.getElementById('footerStats').textContent = uiLang === 'zh'
+      ? `由 ${s.kb_prompts.toLocaleString()} 条专业prompt驱动 · 已生成 ${s.saved_prompts} 个prompt`
+      : `Powered by ${s.kb_prompts.toLocaleString()} expert prompts · ${s.saved_prompts} prompts generated`;
   } catch {}
 }
 
@@ -1178,26 +1353,18 @@ document.addEventListener('keydown', e => {
 });
 
 // ===== Rotating placeholder =====
-const placeholders = [
-  "I want a cinematic video of a cat in space...",
-  "Design a minimal logo for my coffee brand...",
-  "Help me write a product launch email...",
-  "Generate a fantasy landscape illustration...",
-  "Build me a landing page for my startup...",
-  "I need a poster for a music festival...",
-  "Create an anime-style character portrait...",
-  "Write social media copy for a new app...",
-];
 let phIdx = 0;
 setInterval(() => {
   if (turnCount === 0 && chatInput.value === '') {
-    phIdx = (phIdx + 1) % placeholders.length;
-    chatInput.placeholder = placeholders[phIdx];
+    const phs = t('placeholders');
+    phIdx = (phIdx + 1) % phs.length;
+    chatInput.placeholder = phs[phIdx];
   }
 }, 3000);
 
 // ===== Boot =====
 async function boot() {
+  applyI18n();
   await loadSessions();
   if (currentSession) {
     await loadSession(currentSession);

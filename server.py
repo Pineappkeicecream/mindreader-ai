@@ -132,6 +132,15 @@ if DOMAIN_EXPERTS_DIR.exists():
     print(f"Loaded {len(DOMAIN_EXPERTS)} domain experts: {list(DOMAIN_EXPERTS.keys())}")
 
 
+def detect_language(text: str) -> str:
+    """Detect language: 'zh' if CJK-dominant, 'en' otherwise."""
+    if not text.strip():
+        return "en"
+    cjk_count = sum(1 for c in text if '一' <= c <= '鿿' or '㐀' <= c <= '䶿'
+                    or '　' <= c <= '〿' or '＀' <= c <= '￯')
+    return "zh" if cjk_count / max(len(text.strip()), 1) > 0.15 else "en"
+
+
 def detect_domain(text: str) -> str:
     """Detect which domain the user's request belongs to."""
     text_lower = text.lower()
@@ -150,29 +159,35 @@ def detect_domain(text: str) -> str:
     return best_domain
 
 
-def build_domain_context(domain: str) -> str:
+def build_domain_context(domain: str, lang: str = "zh") -> str:
     """Build domain-specific expert context to inject into system prompt."""
     expert = DOMAIN_EXPERTS.get(domain)
+    is_en = lang == "en"
+
     if not expert or domain == "general":
         general = DOMAIN_EXPERTS.get("general", {})
         if general:
-            return f"\n\n## DETECTED DOMAIN: 通用\n{general.get('expert_role', '')}"
+            label = "General" if is_en else "通用"
+            return f"\n\n## DETECTED DOMAIN: {label}\n{general.get('expert_role', '')}"
         return ""
 
     ctx = f"\n\n## DETECTED DOMAIN: {expert['display_name']}\n"
     ctx += f"{expert['expert_role']}\n\n"
 
     # Must-ask dimensions
-    ctx += "### 你必须深入挖掘的维度（每个维度至少问到）：\n"
+    header = "### Dimensions you MUST explore (ask about each one):" if is_en else "### 你必须深入挖掘的维度（每个维度至少问到）："
+    ctx += header + "\n"
     for dim in expert.get("must_ask_dimensions", []):
         ctx += f"\n**{dim['dimension']}**"
         if "why" in dim:
             ctx += f" — {dim['why']}"
         ctx += "\n"
         if "good_question" in dim:
-            ctx += f"  好的问题示例: {dim['good_question']}\n"
+            gq_label = "  Good question example" if is_en else "  好的问题示例"
+            ctx += f"{gq_label}: {dim['good_question']}\n"
         if "bad_question" in dim:
-            ctx += f"  ❌ 差的问题: {dim['bad_question']}\n"
+            bq_label = "  ❌ Bad question" if is_en else "  ❌ 差的问题"
+            ctx += f"{bq_label}: {dim['bad_question']}\n"
         if "example_questions" in dim:
             for eq in dim["example_questions"][:2]:
                 ctx += f"  - {eq}\n"
@@ -180,21 +195,24 @@ def build_domain_context(domain: str) -> str:
     # Output structure
     output = expert.get("output_structure", {})
     if output.get("sections"):
-        ctx += "\n### 最终prompt必须包含这些章节：\n"
+        sec_header = "\n### Final prompt MUST include these sections:" if is_en else "\n### 最终prompt必须包含这些章节："
+        ctx += sec_header + "\n"
         for sec in output["sections"]:
             ctx += f"- **{sec['name']}**: {sec['description']}\n"
 
     # Good example
     if output.get("good_example_summary"):
-        ctx += f"\n### 专业级prompt示例（这是你要达到的质量标准）：\n{output['good_example_summary'][:2000]}\n"
+        ex_header = "\n### Professional-grade prompt example (this is the quality bar you must reach):" if is_en else "\n### 专业级prompt示例（这是你要达到的质量标准）："
+        ctx += f"{ex_header}\n{output['good_example_summary'][:2000]}\n"
 
     return ctx
 
 
-def build_round_context(domain: str, round_num: int) -> str:
+def build_round_context(domain: str, round_num: int, lang: str = "zh") -> str:
     """Build round-specific guidance from domain expert."""
     expert = DOMAIN_EXPERTS.get(domain, DOMAIN_EXPERTS.get("general", {}))
     guidance = expert.get("round_guidance", {})
+    is_en = lang == "en"
 
     round_key = f"round{min(round_num, 4)}"
     round_text = guidance.get(round_key, "")
@@ -202,7 +220,20 @@ def build_round_context(domain: str, round_num: int) -> str:
     if round_num == 1:
         return f"\n\n[SYSTEM: This is Round 1. {round_text}]"
     elif round_num == 2:
-        return f"""\n\n[SYSTEM: This is Round 2 — EXPERT DEEP DIVE. {round_text}
+        if is_en:
+            return f"""\n\n[SYSTEM: This is Round 2 — EXPERT DEEP DIVE. {round_text}
+
+## Round 2 QUALITY RULES:
+1. Use the must_ask_dimensions from the domain expert. Ask 3-5 questions covering different dimensions.
+2. Each question MUST have 3-4 options. Two options is too few — it feels like a yes/no.
+3. Each option description must be a vivid micro-scene with a specific reference (brand, movie, artwork).
+4. You MUST ask "What do you absolutely NOT want?" — this powers the Negative Prompt section.
+5. NEVER repeat what the user told you in previous rounds. Read the conversation history carefully.
+6. Questions should use specific brand/work anchors. ❌"What lighting do you want?" ✅"Is the lighting closer to Vermeer's soft window light, or Blade Runner's neon split lighting?"
+7. This is the LAST round of questions. Cover ALL remaining professional dimensions. Don't hold anything back.
+8. IMPORTANT: Respond in English since the user is writing in English.]"""
+        else:
+            return f"""\n\n[SYSTEM: This is Round 2 — EXPERT DEEP DIVE. {round_text}
 
 ## Round 2 QUALITY RULES:
 1. Use the must_ask_dimensions from the domain expert. Ask 3-5 questions covering different dimensions.
@@ -221,7 +252,7 @@ def build_round_context(domain: str, round_num: int) -> str:
         domain_density = output_struct.get("round4_density_rules", "")
 
         section_names = [s["name"] for s in sections]
-        section_list = "、".join(section_names)
+        section_list = ", ".join(section_names) if is_en else "、".join(section_names)
 
         # Calculate target length from good_example
         target_len = max(len(good_example), 1500)
@@ -229,13 +260,62 @@ def build_round_context(domain: str, round_num: int) -> str:
         # Build density section — domain-specific or fallback
         if domain_density:
             density_block = domain_density
+        elif is_en:
+            density_block = """## Density Requirements:
+- Each section must be at least 120 words with specific details, not vague descriptions
+- Negative: at least 3 categories, each with at least 5 items, totaling at least 18 prohibitions
+- Total length: at least 2000 characters. Don't stop before 2000!"""
         else:
             density_block = """## 密度硬性要求：
 - 每个章节至少120字，要有具体细节不是笼统描述
 - Negative：至少分3类，每类至少5项，共至少18个禁止项
 - 总长度：至少2000字。写到2000字之前不要停！"""
 
-        density_rules = f"""
+        if is_en:
+            density_rules = f"""
+[SYSTEM: This is the FINAL round. You MUST set prompt_ready=true and generate final_prompt NOW. No more questions.
+IMPORTANT: Respond entirely in English since the user is writing in English.
+
+## SUMMARY (Required):
+Before generating final_prompt, write a 200-400 word professional summary in the summary field that "paints" the user's vision.
+- NOT a bullet-point recap! Write a cohesive, vivid description
+- Use specific brand/work names as anchors
+- The summary will be shown to the user so they know what you understood
+
+## CRITICAL OUTPUT RULES:
+1. final_prompt is a STRING (markdown format), use ## headers to separate sections
+2. Must include these sections: {section_list}
+3. Each section's description density must match the level of this example — not shorter, equally detailed or longer:
+
+=== Quality Benchmark (your output must match this density and professionalism) ===
+{good_example[:3000]}
+=== End Quality Benchmark ===
+
+{density_block}
+
+## General Quality Rules:
+- Every noun needs 2-3 modifiers. ❌"a button" ✅"a floating circular blue primary action button in the bottom-right corner with a subtle drop shadow"
+- Use specific descriptions instead of abstract summaries. ❌"minimalist style" ✅"generous whitespace (60%+), Inter font 14px, #F5F5F5 off-white background, 1px line icons"
+- References must be specific to a brand or work. ❌"modern feel" ✅"like Linear's interface — high information density without feeling crowded, using grayscale layers rather than color to differentiate priority"
+- Prohibitions must be specific and actionable. ❌"don't look ugly" ✅"no gradients, no 3D skeuomorphic effects, no border-radius greater than 12px"
+
+## ⚠️ Anti-Copying Rule:
+- The quality benchmark is a "density reference" — learn from its level of detail, but NEVER copy its specific content
+- The benchmark's characters/scenes/colors/artists are from a completely different project, not yours
+- Your final_prompt must be 100% original, created from scratch for the user's specific vision
+- Negative Prompt must be custom-tailored to the current project, not a generic template
+
+## ⚠️ Length Requirements (one of the most important rules):
+- Your final_prompt must be at least {max(target_len, 2000)} characters
+- The quality benchmark has {len(good_example)} characters — your output cannot be shorter
+- If you finish writing but the total is not long enough, immediately add more specific details to each section — more adjectives, material descriptions, reference comparisons, specific values
+- Better to write a 3000-char professional prompt than a 1500-char lazy one
+- After writing each section, check its density — if a section is only 2-3 sentences, you're being too lazy
+- 2000 characters is the MINIMUM! Each section at least 150 words!
+
+{round_text}]"""
+        else:
+            density_rules = f"""
 [SYSTEM: This is the FINAL round. You MUST set prompt_ready=true and generate final_prompt NOW. No more questions.
 
 ## SUMMARY（必填）：
@@ -395,6 +475,103 @@ final_prompt必须是STRING不是JSON。用markdown ## headers来分段。
 - 绝不复述用户已说的内容
 """
 
+SYSTEM_PROMPT_EN = """You are MindReader AI — a world-class prompt architect. You're not a chatbot; you're a director / design lead / creative director / chief architect. When a user says something vague, you can read the complete picture in their mind, then use expert-level questions to extract it all.
+
+## Core Philosophy
+The user has a 100% clear picture in their mind, but can only express 10%. Your job is to use professional questions to pull out the other 90%.
+
+Amateur prompt vs professional prompt gap:
+- Amateur: "A robot cowboy in the wild west, humorous style"
+- Professional: "Post-apocalyptic empty LA. Hero: half-mechanical cowboy, worn wide-brim hat, black battle-damaged leather jacket, rust-red old scarf, white weathered mechanical body. Black digital screen face, relaxed = faint blue smile, alert = cold horizontal line. Shots: 0-3s low-angle wide push-in from golf ball cracks and weeds... Sound: wind, birdsong, golf swing..."
+
+## CRITICAL: JSON Format
+
+{
+  "intro": "One sentence, ≤40 words. Show professional insight, no filler.",
+  "questions": [
+    {
+      "question": "Expert-level question — match the quality of good_question in the domain expert template",
+      "multi_select": true,
+      "allow_text": true,
+      "text_placeholder": "Specific, inspiring hint...",
+      "options": [
+        {"label": "Short label", "description": "A vivid micro-scene, not a dictionary definition"},
+        {"label": "Short label", "description": "Makes the user instantly picture something"}
+      ]
+    }
+  ],
+  "summary": "",
+  "prompt_ready": false,
+  "final_prompt": "",
+  "prompt_explanation": ""
+}
+
+## ⚠️ INTRO Rules (Most Important):
+- ≤40 words. One sentence. Not a paragraph.
+- NEVER say: "That's interesting", "Great idea", "What a creative concept", "I notice you mentioned...", "To help you better..."
+- Correct intros sound like an expert:
+  ✅ "Short-form video — first question: are you telling a story, or showcasing a product?"
+  ✅ "Logo design. Critical first step: what's this brand's personality?"
+  ✅ "Full-stack app — let's map the core user flow first. Tech stack follows from that."
+- For detailed inputs, show you understood: "Robot cowboy + post-apocalyptic LA — very Pixar short film energy. A few key details will make or break it."
+
+## ⚠️ Question Quality Rules:
+- Your domain expert template has good_question examples. Your questions MUST match that quality level, or use those questions directly.
+- NEVER ask bland questions: "What style do you want?" → Should be "Should the lines be rounded like Airbnb or sharp like Nike?"
+- Every question must include specific references/comparisons/choices so users don't have to think from scratch.
+- Use real brands/works as anchors: Apple, Nike, Pixar, Stripe, Notion, etc.
+
+## ⚠️ Option Quality Rules:
+- Each question MUST have 3-5 options. 2 options is too few! Users need enough choice space.
+- label: ≤6 words, clear category
+- description: NOT a dictionary definition! A vivid micro-scene using specific brand/work anchors.
+- ❌ Bad: {"label": "Product showcase", "description": "Showing a product's features and highlights"}
+- ✅ Good: {"label": "Product showcase", "description": "Like an Apple keynote — product slowly rotating from darkness, every detail in close-up, perfectly timed text beats"}
+- ❌ Bad: {"label": "Emotional", "description": "Making the audience feel emotional resonance"}
+- ✅ Good: {"label": "Emotional", "description": "Like the opening of Pixar's UP — no words needed, just visuals that make you cry quietly"}
+- Last option can be "Other / let me describe" for free input
+
+## Flow — 2 rounds of questions + 1 generation round (3 total, don't drag to 4!):
+
+### Round 1 — Lock Direction (3-4 questions)
+Adapt based on input depth:
+- Vague input (<30 words): Establish "what is this" → any specific vision → core feeling
+- Detailed input (>30 words): Don't repeat what they said! Go straight to expert-level details they haven't mentioned.
+
+### Round 2 — Expert Deep Dive (3-5 questions)
+Use must_ask_dimensions from domain expert template. Questions must be like the template's good_question — with specific references and comparisons.
+MUST ask "What do you absolutely NOT want?" — this powers the Negative Prompt.
+⚠️ This is the LAST round of questions! Cover ALL key dimensions, don't save anything for later.
+
+### Round 3 — Generate Final Prompt (no more questions!)
+1. Fill the summary field: "paint" the user's vision in professional language (200-400 words)
+2. Set prompt_ready=true
+3. Generate final_prompt (markdown string format, 1200-3000 words)
+final_prompt sections MUST follow the output_structure.sections defined in the domain expert template.
+final_prompt must be a STRING not JSON. Use markdown ## headers to separate sections.
+If there are round4_density_rules, you MUST strictly follow each section's minimum word count.
+⚠️ NEVER ask more questions in Round 3! The user has given enough information, generate directly.
+
+## Description Density Rules:
+❌ "Father wearing a dark coat, gentle expression"
+✅ "Father in a slightly pilled navy wool overcoat, collar turned up against the wind, left hand holding a black folding umbrella with raindrops rolling off. Expression calm but with warm laugh lines at the corners of his eyes."
+
+❌ "Sound: rain"
+✅ "Sound: foreground — dense tapping of raindrops on umbrella surface; midground — gentle splashing of father-son footsteps in puddles; background — low urban white noise."
+
+Rule: Every noun needs adjectives. Every action needs a manner. Every sound needs layers. If you close your eyes and can't see/hear it = not detailed enough.
+
+## Iron Rules:
+- intro ≤40 words, never waste words ("so interesting" "such a creative" = wasted words)
+- Questions must match domain expert template good_question quality
+- Option descriptions are micro-scenes, not dictionary definitions
+- NEVER ask "who is the target audience" "what style" — these are bland questions
+- Round 3 must generate final_prompt directly, no confirmation questions
+- NEVER skip the Negative section
+- NEVER restate what the user already said
+"""
+
+
 def _format_structured_prompt(obj: dict) -> str:
     """Convert a structured prompt dict into a well-formatted string."""
     lines = []
@@ -501,15 +678,22 @@ def format_prompt_for_tool(prompt: str, target_format: str) -> str:
 sessions: dict[str, dict] = {}
 
 
-def _build_initial_system_message(domain: str, first_message: str) -> str:
-    domain_context = build_domain_context(domain)
+def _build_initial_system_message(domain: str, first_message: str, lang: str = "zh") -> str:
+    base_prompt = SYSTEM_PROMPT_EN if lang == "en" else SYSTEM_PROMPT
+    domain_context = build_domain_context(domain, lang)
     relevant = find_relevant_prompts(first_message, limit=3)
     kb_context = ""
     if relevant:
         kb_context = "\n\n## Reference Prompts from Knowledge Base\nUse these as INSPIRATION only:\n\n"
         for i, p in enumerate(relevant, 1):
             kb_context += f"### Reference {i}: {p['act']}\n{p['prompt'][:500]}\n\n"
-    return SYSTEM_PROMPT + domain_context + kb_context
+
+    # Add language instruction
+    lang_instruction = ""
+    if lang == "en":
+        lang_instruction = "\n\n## LANGUAGE: The user is writing in English. You MUST respond entirely in English — all intros, questions, options, descriptions, summaries, and final prompts must be in English.\n"
+
+    return base_prompt + lang_instruction + domain_context + kb_context
 
 
 def _restore_session_from_db(session_id: str) -> bool:
@@ -528,13 +712,22 @@ def _restore_session_from_db(session_id: str) -> bool:
         if msg["role"] in {"user", "assistant"}:
             restored.append({"role": msg["role"], "content": msg["content"]})
 
+    # Detect language from first user message
+    first_user_msg = ""
+    for msg in db_messages:
+        if msg["role"] == "user":
+            first_user_msg = msg["content"]
+            break
+    restored_lang = detect_language(first_user_msg)
+
     sessions[session_id] = {
         "messages": restored,
         "created_at": session.get("created_at", time.time()),
         "domain": domain,
         "model": session.get("model", "hybrid"),
+        "lang": restored_lang,
     }
-    print(f"Restored session {session_id[:8]}... | Domain: {domain} | Messages: {len(db_messages)}")
+    print(f"Restored session {session_id[:8]}... | Domain: {domain} | Lang: {restored_lang} | Messages: {len(db_messages)}")
     return True
 
 
@@ -670,25 +863,28 @@ async def chat(request: Request):
         return {"error": "Empty message"}
 
     if session_id not in sessions and not _restore_session_from_db(session_id):
-        # Detect domain from user's first message
+        # Detect domain and language from user's first message
         detected_domain = detect_domain(user_message)
+        detected_lang = detect_language(user_message)
 
         sessions[session_id] = {
-            "messages": [{"role": "system", "content": _build_initial_system_message(detected_domain, user_message)}],
+            "messages": [{"role": "system", "content": _build_initial_system_message(detected_domain, user_message, detected_lang)}],
             "created_at": time.time(),
             "domain": detected_domain,
+            "lang": detected_lang,
         }
-        print(f"New session {session_id[:8]}... | Domain: {detected_domain}")
+        print(f"New session {session_id[:8]}... | Domain: {detected_domain} | Lang: {detected_lang}")
         database.save_session(session_id, detected_domain, use_model, user_message, user_id=user_id)
 
     msgs = sessions[session_id]["messages"]
     domain = sessions[session_id].get("domain", "general")
+    lang = sessions[session_id].get("lang", "zh")
 
     # Count user turns to determine round
     user_turn_count = len([m for m in msgs if m["role"] == "user"]) + 1
 
     # Inject domain-specific round guidance
-    round_guidance = build_round_context(domain, user_turn_count)
+    round_guidance = build_round_context(domain, user_turn_count, lang)
 
     # For Round 1, add input-depth-adaptive guidance
     is_detailed = True  # default for Round 2+
@@ -731,9 +927,11 @@ async def chat(request: Request):
         }
         domain_detail = detail_hints.get(domain, detail_hints["general"])
 
+        is_en = lang == "en"
+
         if not is_detailed:
-            # Check if domain has preset questions for vague inputs
-            preset = expert.get("round1_preset_vague")
+            # Check if domain has preset questions for vague inputs (only for Chinese)
+            preset = expert.get("round1_preset_vague") if not is_en else None
             if preset:
                 # Use preset questions directly — skip API call for much better quality
                 preset_data = {
@@ -753,20 +951,25 @@ async def chat(request: Request):
                     "turn": len([m for m in msgs if m["role"] == "user"]),
                     "model_used": "preset",
                     "domain": domain,
+                    "lang": lang,
                 }
 
-            round_guidance += f"\n[INPUT_DEPTH: VAGUE — user said very little. Ask: 1) What specifically is this about? ({domain_opts}), 2) Do you have any specific picture/idea in mind? (open text with good placeholder), 3) What's the core goal/feeling? Do NOT ask about expert-level details yet — the user hasn't told you enough.]"
+            if is_en:
+                round_guidance += f"\n[INPUT_DEPTH: VAGUE — user said very little. Ask: 1) What specifically is this about? ({domain_opts}), 2) Do you have any specific picture/idea in mind? (open text with good placeholder), 3) What's the core goal/feeling? Do NOT ask about expert-level details yet — the user hasn't told you enough. IMPORTANT: Respond in English.]"
+            else:
+                round_guidance += f"\n[INPUT_DEPTH: VAGUE — user said very little. Ask: 1) What specifically is this about? ({domain_opts}), 2) Do you have any specific picture/idea in mind? (open text with good placeholder), 3) What's the core goal/feeling? Do NOT ask about expert-level details yet — the user hasn't told you enough.]"
         else:
             # Detailed input: user already gave specifics, jump straight to expert-level questions
+            en_suffix = "\n9. IMPORTANT: Respond entirely in English since the user is writing in English." if is_en else ""
             round_guidance += f"""\n[INPUT_DEPTH: DETAILED — user already gave specific information. CRITICAL RULES:
-1. NEVER repeat or rephrase what the user already told you. If they said '赛博朋克东京街景下雨', do NOT ask 'what style' or 'what scene' or 'what weather' — they already told you.
+1. NEVER repeat or rephrase what the user already told you. If they said 'cyberpunk Tokyo rainy streets', do NOT ask 'what style' or 'what scene' or 'what weather' — they already told you.
 2. Jump to the NEXT LEVEL of detail — the expert dimensions they HAVEN'T covered yet.
 3. {domain_detail}
 4. Each question MUST have 3-4 options minimum, each option with vivid description using specific brand/work references.
 5. The user's message is: "{user_message[:200]}". Extract what they already decided, then ask about everything ELSE.
 6. Your intro should prove you understood: reference their specific idea, then pivot to what's missing.
-7. EXAMPLE of what NOT to do: User says '赛博朋克东京' → you ask '什么风格？' ← This is TERRIBLE. They already said the style.
-8. EXAMPLE of what TO do: User says '赛博朋克东京' → you ask '这个赛博朋克东京的光线是《银翼杀手》式的橙蓝split lighting，还是《攻壳机动队》式的冷绿色全息投影感？' ← This proves you understood AND goes deeper.]"""
+7. EXAMPLE of what NOT to do: User says 'cyberpunk Tokyo' → you ask 'What style?' ← This is TERRIBLE. They already said the style.
+8. EXAMPLE of what TO do: User says 'cyberpunk Tokyo' → you ask 'Is the lighting for this cyberpunk Tokyo more like Blade Runner's orange-blue split lighting, or Ghost in the Shell's cold green holographic projection feel?' ← This proves you understood AND goes deeper.{en_suffix}]"""
 
     # Inject round guidance as a separate system message for cleaner context
     if round_guidance:
@@ -845,7 +1048,16 @@ async def chat(request: Request):
     while fp and data.get("prompt_ready") and len(fp) < 2000 and user_turn_count >= 3 and expand_attempts < 2:
         expand_attempts += 1
         print(f"  ⚠️ Final prompt too short ({len(fp)} chars). Expansion attempt {expand_attempts}...")
-        expand_msg = f"""你的final_prompt只有{len(fp)}字，严重不足！目标是至少2000字。请重新生成，这次必须：
+        if lang == "en":
+            expand_msg = f"""Your final_prompt is only {len(fp)} characters — far too short! Target is at least 2000 characters. Please regenerate, this time you MUST:
+1. Write at least 150-300 words of detailed description per section, not just 2-3 sentences
+2. Add more specific adjectives, material descriptions, color details, spatial relationships, brand references
+3. Negative section must list at least 18 specific prohibitions across 3 categories
+4. Total length MUST exceed 2000 characters — this is a hard requirement
+5. Review the quality benchmark again — your density per section must at least match it
+Please output the complete JSON again in the same format."""
+        else:
+            expand_msg = f"""你的final_prompt只有{len(fp)}字，严重不足！目标是至少2000字。请重新生成，这次必须：
 1. 每个章节至少写150-300字的详细描述，不是两三句话就结束
 2. 加入更多具体的形容词、材质描写、颜色描写、空间关系、品牌参考
 3. Negative部分至少列18个具体禁止项，分3类
@@ -907,6 +1119,7 @@ async def chat(request: Request):
         "turn": len([m for m in msgs if m["role"] == "user"]),
         "model_used": active_model,
         "domain": domain,
+        "lang": lang,
     }
 
 
