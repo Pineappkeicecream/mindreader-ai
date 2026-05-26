@@ -5,6 +5,7 @@ import json
 import os
 import re
 import time
+import hashlib
 from collections import defaultdict
 from pathlib import Path
 
@@ -89,6 +90,87 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _access_code() -> str:
+    return os.getenv("ACCESS_CODE", "").strip()
+
+
+def _access_cookie_value() -> str:
+    code = _access_code()
+    if not code:
+        return ""
+    return hashlib.sha256(("mindreader-access:" + code).encode()).hexdigest()
+
+
+def _has_access(request: Request) -> bool:
+    code = _access_code()
+    if not code:
+        return True
+    if request.cookies.get("mr_access") == _access_cookie_value():
+        return True
+    return request.query_params.get("access_code", "") == code
+
+
+def _admin_token() -> str:
+    return os.getenv("ADMIN_TOKEN", "").strip()
+
+
+def _is_admin_request(request: Request) -> bool:
+    token = _admin_token()
+    if not token:
+        return False
+    supplied = request.query_params.get("token") or request.headers.get("x-admin-token", "")
+    return supplied == token
+
+
+ACCESS_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindReader AI — Access</title>
+<meta name="robots" content="noindex">
+<style>
+*{box-sizing:border-box;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{margin:0;min-height:100vh;background:#09090b;color:#fafafa;display:grid;place-items:center;padding:24px}
+.panel{width:min(420px,100%);border:1px solid #27272a;background:#111113;border-radius:16px;padding:24px}
+.logo{width:40px;height:40px;border-radius:10px;background:#4f46e5;display:grid;place-items:center;margin-bottom:16px}
+h1{font-size:22px;margin:0 0 8px}
+p{color:#a1a1aa;font-size:14px;line-height:1.6;margin:0 0 20px}
+input{width:100%;background:#09090b;border:1px solid #3f3f46;border-radius:10px;color:#fff;padding:12px 14px;font-size:14px;outline:none}
+input:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.25)}
+button{width:100%;margin-top:12px;border:0;border-radius:10px;background:#4f46e5;color:#fff;padding:12px 14px;font-weight:700;cursor:pointer}
+button:hover{background:#6366f1}
+.err{display:none;color:#fca5a5;font-size:13px;margin-top:12px}
+</style>
+</head>
+<body>
+<main class="panel">
+  <div class="logo">●</div>
+  <h1>MindReader AI</h1>
+  <p>This beta is private. Enter the access code from Charles to continue.</p>
+  <form id="form">
+    <input id="code" type="password" placeholder="Access code" autocomplete="current-password" autofocus>
+    <button type="submit">Enter</button>
+    <div class="err" id="err">Wrong access code. Please try again.</div>
+  </form>
+</main>
+<script>
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const code = document.getElementById('code').value.trim();
+  const res = await fetch('/api/access', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({code})
+  });
+  if (res.ok) location.href = '/';
+  else document.getElementById('err').style.display = 'block';
+});
+</script>
+</body>
+</html>"""
+
+
 app = FastAPI(title="MindReader AI")
 
 # CORS — allow the Railway domain and localhost
@@ -106,6 +188,42 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
+@app.middleware("http")
+async def access_gate(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    path = request.url.path
+    public_paths = {"/health", "/api/access"}
+    if path in public_paths or path.startswith("/favicon"):
+        return await call_next(request)
+    if _has_access(request):
+        return await call_next(request)
+    accepts_html = "text/html" in request.headers.get("accept", "")
+    if request.method == "GET" and accepts_html:
+        return HTMLResponse(ACCESS_HTML, status_code=401)
+    return JSONResponse(status_code=401, content={"error": "Access code required"})
+
+
+@app.post("/api/access")
+async def enter_access(request: Request):
+    code = _access_code()
+    if not code:
+        return {"ok": True}
+    body = await request.json()
+    if (body.get("code") or "").strip() != code:
+        return JSONResponse(status_code=401, content={"error": "Invalid access code"})
+    response = JSONResponse({"ok": True})
+    response.set_cookie(
+        "mr_access",
+        _access_cookie_value(),
+        max_age=60 * 60 * 24 * 30,
+        httponly=True,
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
     return response
 
 
@@ -1266,8 +1384,6 @@ async def stats():
     }
 
 
-import hashlib
-
 def _hash_ip(ip: str) -> str:
     """Hash IP for privacy-preserving analytics."""
     return hashlib.sha256((ip + "mindreader-salt").encode()).hexdigest()[:16]
@@ -1287,8 +1403,10 @@ async def track_event(request: Request):
 
 
 @app.get("/api/analytics")
-async def analytics_api(days: int = 7):
+async def analytics_api(request: Request, days: int = 7):
     """Return analytics summary. Simple dashboard data."""
+    if not _is_admin_request(request):
+        return JSONResponse(status_code=403, content={"error": "Admin token required"})
     days = max(1, min(days, 90))
     return database.get_analytics(days=days)
 
@@ -1305,8 +1423,13 @@ async def subscribe(request: Request):
 
 
 @app.get("/analytics", response_class=HTMLResponse)
-async def analytics_page():
+async def analytics_page(request: Request):
     """Simple analytics dashboard."""
+    if not _is_admin_request(request):
+        return HTMLResponse(
+            "<h1 style='font-family:system-ui;background:#09090b;color:#fafafa;min-height:100vh;margin:0;display:grid;place-items:center'>Analytics locked</h1>",
+            status_code=403,
+        )
     return HTMLResponse(ANALYTICS_HTML)
 
 
@@ -1397,7 +1520,8 @@ async function loadData(days, btn) {
     btn.classList.add('active');
   }
   try {
-    const res = await fetch('/api/analytics?days=' + days);
+    const token = new URLSearchParams(location.search).get('token') || '';
+    const res = await fetch('/api/analytics?days=' + days + '&token=' + encodeURIComponent(token));
     const d = await res.json();
     render(d);
   } catch { console.error('Failed to load analytics'); }

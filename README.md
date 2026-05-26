@@ -21,9 +21,19 @@ Create a `.env` file with:
 
 ```bash
 OPENAI_API_KEY=your_api_key_here
+ACCESS_CODE=share_this_with_beta_friends
+ADMIN_TOKEN=private_dashboard_token
 ```
 
 The app can load without `python-dotenv`, but installing the requirements is recommended.
+
+`ACCESS_CODE` is optional for local development. When set in Railway, visitors must enter the code before using the app.
+
+`ADMIN_TOKEN` protects analytics. Open the dashboard with:
+
+```text
+/analytics?token=your_admin_token
+```
 
 ## What Works
 
