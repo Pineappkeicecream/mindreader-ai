@@ -175,6 +175,45 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
 .suggestion .s-cat.code{color:#67e8f9}
 .suggestion .s-cat.general{color:#a1a1aa}
 
+/* Hero section */
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:#1e1b4b;border:1px solid #312e81;border-radius:20px;padding:4px 12px;font-size:11px;color:#a5b4fc;font-weight:600;margin-bottom:16px}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:#10b981;animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+.hero-title{font-size:32px;font-weight:800;line-height:1.2;letter-spacing:-.02em;margin-bottom:8px}
+.hero-title .gradient{background:linear-gradient(135deg,#818cf8,#c084fc,#f0abfc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-subtitle{color:#71717a;font-size:15px;line-height:1.6;max-width:500px;margin:0 auto 24px}
+.hero-stats{display:flex;justify-content:center;gap:24px;margin-bottom:28px}
+.hero-stat{text-align:center}
+.hero-stat .num{font-size:20px;font-weight:700;color:#a5b4fc}
+.hero-stat .label{font-size:10px;color:#52525b;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.how-steps{display:flex;gap:12px;margin-bottom:28px;max-width:560px;width:100%}
+.how-step{flex:1;background:#111113;border:1px solid #1e1e22;border-radius:12px;padding:14px 12px;text-align:center}
+.how-step .step-num{width:24px;height:24px;border-radius:50%;background:#1e1b4b;color:#a5b4fc;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-bottom:8px}
+.how-step .step-title{font-size:12px;font-weight:600;color:#e4e4e7;margin-bottom:4px}
+.how-step .step-desc{font-size:11px;color:#52525b;line-height:1.4}
+
+/* Prompt score badge */
+.prompt-score{display:flex;align-items:center;gap:12px;margin:12px 0;padding:12px 16px;background:#0a1220;border:1px solid #1e2d4a;border-radius:12px}
+.score-ring{width:48px;height:48px;position:relative;flex-shrink:0}
+.score-ring svg{transform:rotate(-90deg)}
+.score-ring .score-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#10b981}
+.score-details{display:flex;flex-wrap:wrap;gap:8px;flex:1}
+.score-item{font-size:11px;color:#71717a;display:flex;align-items:center;gap:4px}
+.score-item .dot-g{width:6px;height:6px;border-radius:50%;background:#10b981}
+.score-item .dot-y{width:6px;height:6px;border-radius:50%;background:#eab308}
+.score-item .dot-b{width:6px;height:6px;border-radius:50%;background:#6366f1}
+.prompt-tags{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.prompt-tag{font-size:10px;padding:2px 8px;border-radius:6px;background:#1e1b4b;color:#a5b4fc;border:1px solid #312e81;font-weight:500}
+
+@media(max-width:768px){
+  .hero-title{font-size:24px}
+  .hero-subtitle{font-size:13px}
+  .hero-stats{gap:16px}
+  .how-steps{flex-direction:column;gap:8px}
+  .how-step{padding:10px}
+  .prompt-score{flex-direction:column;text-align:center}
+}
+
 .fade-in{animation:fadeIn .4s ease-out}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
@@ -235,21 +274,26 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
 @media(max-width:768px){
   .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:40;transform:translateX(-100%)}
   .sidebar.open{transform:translateX(0)}
-  .mobile-header{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #1a1a1e}
-  .hamburger{background:none;border:none;color:#a1a1aa;font-size:20px;cursor:pointer;padding:4px 8px}
+  .mobile-header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #1a1a1e}
+  .hamburger{background:none;border:none;color:#a1a1aa;font-size:22px;cursor:pointer;padding:6px 10px;-webkit-tap-highlight-color:transparent}
   .mobile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:35;display:none}
   .mobile-overlay.show{display:block}
-  .suggestion{min-width:0}
-  .q-opt{flex:1 1 100%;min-width:0}
+  .suggestion{min-width:0;padding:12px 14px}
+  .q-opt{flex:1 1 100%;min-width:0;padding:12px 14px}
   .msg-user{max-width:90%}
-  .export-bar{flex-direction:column}
+  .export-bar{flex-direction:row;flex-wrap:wrap}
+  .export-btn{padding:8px 12px;font-size:12px}
   /* Better mobile input area */
-  #chatArea{padding-bottom:80px}
+  #chatArea{padding-bottom:20px}
   .prompt-card{padding:14px}
   .prompt-rendered{padding:14px;font-size:13px}
   .summary-card{padding:12px}
-  .welcome-how{flex-direction:column;gap:12px}
-  .welcome-how>div:nth-child(2),.welcome-how>div:nth-child(4){display:none}
+  /* Input area padding for virtual keyboard */
+  .px-5.pb-4{padding-bottom:env(safe-area-inset-bottom, 12px) !important}
+  /* Rate buttons larger touch target */
+  .rate-btn{padding:8px 16px;font-size:15px}
+  .feedback-box textarea{min-height:44px;font-size:14px}
+  .continue-btn{padding:12px 28px;font-size:15px;width:100%}
 }
 </style>
 </head>
@@ -365,34 +409,33 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
     <!-- Chat area -->
     <div id="chatArea" class="flex-1 overflow-y-auto px-5 py-6 space-y-5">
 
-      <!-- Welcome -->
-      <div id="welcomeState" class="flex flex-col items-center justify-center h-full text-center">
-        <svg width="56" height="56" viewBox="0 0 32 32" fill="none" class="mb-4">
-          <rect width="32" height="32" rx="8" fill="#4F46E5"/>
-          <path d="M16 6C10.477 6 6 10.477 6 16s4.477 10 10 10 10-4.477 10-10S21.523 6 16 6z" fill="none" stroke="#C7D2FE" stroke-width="1.5"/>
-          <path d="M16 10c-3.314 0-6 2.686-6 6s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6z" fill="none" stroke="#A5B4FC" stroke-width="1.5"/>
-          <circle cx="16" cy="16" r="2.5" fill="#E0E7FF"/>
-          <path d="M16 8v3M16 21v3M8 16h3M21 16h3" stroke="#818CF8" stroke-width="1" stroke-linecap="round" opacity=".5"/>
-        </svg>
-        <h1 class="text-2xl font-bold text-white mb-2" id="welcomeTitle">What do you want to create?</h1>
-        <p class="text-zinc-500 text-sm mb-2 max-w-md" id="welcomeSubtitle">
-          Describe your idea, even vaguely. I'll ask expert questions to read your mind, then generate the perfect prompt.
+      <!-- Welcome / Hero -->
+      <div id="welcomeState" class="flex flex-col items-center justify-center h-full text-center px-4">
+        <div class="hero-badge" id="heroBadge"><span class="dot"></span> <span id="heroBadgeText">Free &amp; Open</span></div>
+        <h1 class="hero-title" id="welcomeTitle"><span class="gradient" id="heroGradient">AI Prompt Generator</span><br><span class="text-white" id="heroPlain">That Reads Your Mind</span></h1>
+        <p class="hero-subtitle" id="welcomeSubtitle">
+          Describe your idea — even one sentence. Expert AI asks the right questions, then writes a professional 2000+ character prompt for Midjourney, DALL-E, ChatGPT &amp; more.
         </p>
-        <!-- How it works -->
-        <div class="welcome-how flex gap-6 mb-8 max-w-lg text-left" style="font-size:12px">
-          <div class="flex-1">
-            <div style="color:#818cf8;font-weight:700;margin-bottom:2px" id="howStep1">1. Describe</div>
-            <div style="color:#71717a" id="howStep1Desc">Tell me your idea, even a single sentence</div>
+        <div class="hero-stats" id="heroStats">
+          <div class="hero-stat"><div class="num" id="heroStatExperts">6</div><div class="label" id="heroStatExpertsLabel">Domain Experts</div></div>
+          <div class="hero-stat"><div class="num" id="heroStatKB">1,633</div><div class="label" id="heroStatKBLabel">Knowledge Prompts</div></div>
+          <div class="hero-stat"><div class="num" id="heroStatFormats">4</div><div class="label" id="heroStatFormatsLabel">Export Formats</div></div>
+        </div>
+        <div class="how-steps" id="howSteps">
+          <div class="how-step">
+            <div class="step-num">1</div>
+            <div class="step-title" id="howStep1">Describe</div>
+            <div class="step-desc" id="howStep1Desc">Tell your idea in any words</div>
           </div>
-          <div style="color:#3f3f46;align-self:center;font-size:16px">&#8594;</div>
-          <div class="flex-1">
-            <div style="color:#818cf8;font-weight:700;margin-bottom:2px" id="howStep2">2. Refine</div>
-            <div style="color:#71717a" id="howStep2Desc">I ask expert questions to understand your vision</div>
+          <div class="how-step">
+            <div class="step-num">2</div>
+            <div class="step-title" id="howStep2">Refine</div>
+            <div class="step-desc" id="howStep2Desc">Pick from expert options</div>
           </div>
-          <div style="color:#3f3f46;align-self:center;font-size:16px">&#8594;</div>
-          <div class="flex-1">
-            <div style="color:#818cf8;font-weight:700;margin-bottom:2px" id="howStep3">3. Generate</div>
-            <div style="color:#71717a" id="howStep3Desc">Get a perfect prompt for any AI tool</div>
+          <div class="how-step">
+            <div class="step-num">3</div>
+            <div class="step-title" id="howStep3">Generate</div>
+            <div class="step-desc" id="howStep3Desc">Get a perfect prompt</div>
           </div>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-2xl" id="suggestionsGrid">
@@ -503,11 +546,15 @@ body{margin:0;background:#09090b;color:#fafafa;min-height:100vh}
 // ===== i18n =====
 const i18n = {
   en: {
-    title: 'What do you want to create?',
-    subtitle: 'Describe your idea, even vaguely. I\'ll ask expert questions to read your mind, then generate the perfect prompt.',
-    step1: 'Describe', step1desc: 'Tell me your idea, even a single sentence',
-    step2: 'Refine', step2desc: 'I ask expert questions to understand your vision',
-    step3: 'Generate', step3desc: 'Get a perfect prompt for any AI tool',
+    heroGradient: 'AI Prompt Generator', heroPlain: 'That Reads Your Mind',
+    heroBadge: 'Free & Open',
+    title: 'AI Prompt Generator',
+    subtitle: 'Describe your idea — even one sentence. Expert AI asks the right questions, then writes a professional 2000+ character prompt for Midjourney, DALL-E, ChatGPT & more.',
+    step1: 'Describe', step1desc: 'Tell your idea in any words',
+    step2: 'Refine', step2desc: 'Pick from expert options',
+    step3: 'Generate', step3desc: 'Get a perfect prompt',
+    heroExperts: 'Domain Experts', heroKB: 'Knowledge Prompts', heroFormats: 'Export Formats',
+    scoreLabel: 'Prompt Quality', scoreDetail: 'Detail', scoreSections: 'Sections', scoreLength: 'Length',
     newSession: '+ New Session',
     sessions: 'Sessions', myPrompts: 'My Prompts',
     recent: 'Recent', savedPrompts: 'Saved Prompts',
@@ -566,11 +613,15 @@ const i18n = {
     ],
   },
   zh: {
-    title: '你想创造什么？',
-    subtitle: '描述你的想法，哪怕只是一句话。我会用专家级提问读懂你的想法，然后生成完美的prompt。',
-    step1: '描述', step1desc: '告诉我你的想法，哪怕只有一句话',
-    step2: '深挖', step2desc: '我会用专家级问题理解你的愿景',
-    step3: '生成', step3desc: '获得适用于任何AI工具的完美prompt',
+    heroGradient: 'AI Prompt 生成器', heroPlain: '读懂你的想法',
+    heroBadge: '免费 & 开源',
+    title: 'AI Prompt 生成器',
+    subtitle: '描述你的想法——哪怕只有一句话。AI专家帮你问对问题，生成2000+字的专业prompt，适用于Midjourney、DALL-E、ChatGPT等。',
+    step1: '描述', step1desc: '用任何语言说出想法',
+    step2: '深挖', step2desc: '从专家选项中选择',
+    step3: '生成', step3desc: '获得完美prompt',
+    heroExperts: '领域专家', heroKB: '知识库Prompt', heroFormats: '导出格式',
+    scoreLabel: 'Prompt质量', scoreDetail: '细节', scoreSections: '板块', scoreLength: '长度',
     newSession: '+ 新会话',
     sessions: '会话', myPrompts: '我的Prompt',
     recent: '最近', savedPrompts: '已保存的Prompt',
@@ -666,15 +717,21 @@ function setModel(model, btn) {
 
 // ===== i18n application =====
 function applyI18n() {
-  // Welcome
-  const wt = document.getElementById('welcomeTitle'); if (wt) wt.textContent = t('title');
+  // Hero
+  const hg = document.getElementById('heroGradient'); if (hg) hg.textContent = t('heroGradient');
+  const hp = document.getElementById('heroPlain'); if (hp) hp.textContent = t('heroPlain');
+  const hb = document.getElementById('heroBadgeText'); if (hb) hb.textContent = t('heroBadge');
   const ws = document.getElementById('welcomeSubtitle'); if (ws) ws.textContent = t('subtitle');
-  const hs1 = document.getElementById('howStep1'); if (hs1) hs1.textContent = '1. ' + t('step1');
+  const hs1 = document.getElementById('howStep1'); if (hs1) hs1.textContent = t('step1');
   const hs1d = document.getElementById('howStep1Desc'); if (hs1d) hs1d.textContent = t('step1desc');
-  const hs2 = document.getElementById('howStep2'); if (hs2) hs2.textContent = '2. ' + t('step2');
+  const hs2 = document.getElementById('howStep2'); if (hs2) hs2.textContent = t('step2');
   const hs2d = document.getElementById('howStep2Desc'); if (hs2d) hs2d.textContent = t('step2desc');
-  const hs3 = document.getElementById('howStep3'); if (hs3) hs3.textContent = '3. ' + t('step3');
+  const hs3 = document.getElementById('howStep3'); if (hs3) hs3.textContent = t('step3');
   const hs3d = document.getElementById('howStep3Desc'); if (hs3d) hs3d.textContent = t('step3desc');
+  // Hero stats labels
+  const hel = document.getElementById('heroStatExpertsLabel'); if (hel) hel.textContent = t('heroExperts');
+  const hkl = document.getElementById('heroStatKBLabel'); if (hkl) hkl.textContent = t('heroKB');
+  const hfl = document.getElementById('heroStatFormatsLabel'); if (hfl) hfl.textContent = t('heroFormats');
   // Suggestion cards
   const cats = {Video:'sVideo',Image:'sImage',Design:'sDesign',Writing:'sWriting',Code:'sCode',Other:'sOther'};
   const descs = {Video:'sVideoDesc',Image:'sImageDesc',Design:'sDesignDesc',Writing:'sWritingDesc',Code:'sCodeDesc',Other:'sOtherDesc'};
@@ -852,17 +909,42 @@ function addAiRound(data) {
 
     // Rendered prompt
     const promptId = 'prompt-' + Date.now();
+    const pLen = data.final_prompt.length;
+    const pSections = (data.final_prompt.match(/^## /gm)||[]).length;
+    const pDetails = (data.final_prompt.match(/^- /gm)||[]).length;
+    // Quality score: based on length, sections, detail bullets
+    const lenScore = Math.min(pLen / 2500, 1) * 40;
+    const secScore = Math.min(pSections / 6, 1) * 30;
+    const detScore = Math.min(pDetails / 10, 1) * 30;
+    const qualityScore = Math.round(lenScore + secScore + detScore);
+    const scoreColor = qualityScore >= 80 ? '#10b981' : qualityScore >= 60 ? '#eab308' : '#ef4444';
+    const circumference = 2 * Math.PI * 18;
+    const scoreOffset = circumference - (qualityScore / 100) * circumference;
+    // Extract key tags from headings
+    const headings = (data.final_prompt.match(/^## (.+)$/gm) || []).map(h => h.replace('## ', ''));
+
     html += `<div class="prompt-card">
       <div class="text-xs font-semibold text-emerald-400 mb-2 flex items-center gap-2">
         ${t('yourPrompt')}
         ${data.prompt_id ? `<span class="text-zinc-600 font-normal">#${data.prompt_id}</span>` : ''}
       </div>
-      <div class="prompt-rendered" id="${promptId}">${renderMarkdown(data.final_prompt)}</div>
-      <div class="flex items-center gap-3 mt-2 mb-1 text-[10px] text-zinc-600">
-        <span>${(data.final_prompt.length/1000).toFixed(1)}k chars</span>
-        <span>${(data.final_prompt.match(/^## /gm)||[]).length} sections</span>
-        ${data.prompt_id ? `<span>ID #${data.prompt_id}</span>` : ''}
+      <div class="prompt-score">
+        <div class="score-ring">
+          <svg width="48" height="48" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="18" fill="none" stroke="#1e2d4a" stroke-width="3"/>
+            <circle cx="24" cy="24" r="18" fill="none" stroke="${scoreColor}" stroke-width="3" stroke-linecap="round"
+              stroke-dasharray="${circumference}" stroke-dashoffset="${scoreOffset}" style="transition:stroke-dashoffset .8s ease"/>
+          </svg>
+          <div class="score-val" style="color:${scoreColor}">${qualityScore}</div>
+        </div>
+        <div class="score-details">
+          <div class="score-item"><span class="dot-g"></span> ${t('scoreLength')}: ${(pLen/1000).toFixed(1)}k</div>
+          <div class="score-item"><span class="dot-b"></span> ${t('scoreSections')}: ${pSections}</div>
+          <div class="score-item"><span class="dot-y"></span> ${t('scoreDetail')}: ${pDetails} items</div>
+        </div>
       </div>
+      ${headings.length > 0 ? '<div class="prompt-tags">' + headings.map(h => '<span class="prompt-tag">' + esc(h) + '</span>').join('') + '</div>' : ''}
+      <div class="prompt-rendered" id="${promptId}">${renderMarkdown(data.final_prompt)}</div>
       <div class="export-bar">
         <button class="export-btn primary" onclick="copyRaw('${promptId}', this)">${t('copyRaw')}</button>
         <button class="export-btn" onclick="copyForTool('${promptId}','midjourney',this)">&#127912; Midjourney</button>
@@ -1433,7 +1515,25 @@ chatForm.addEventListener('submit', async e => {
   } catch (err) {
     hideTyping();
     const msg2 = err.name === 'AbortError' ? t('timeout') : err.message;
-    showError(msg2);
+    showError(msg2, () => {
+      // Retry: re-send the same message
+      showTyping();
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: currentSession, user_id: userId, message: msg, model: currentModel }),
+      }).then(r => r.json()).then(data => {
+        if (data.error) throw new Error(data.error);
+        turnCount = data.turn || 1;
+        currentDomain = data.domain || '';
+        hideTyping();
+        updateProgress(turnCount + 1);
+        addAiRound(data);
+      }).catch(e2 => {
+        hideTyping();
+        showError(e2.message || t('networkError'));
+      });
+    });
   }
   sendBtn.disabled = !chatInput.value.trim();
   chatInput.focus();
@@ -1477,6 +1577,9 @@ async function loadStats() {
     document.getElementById('footerStats').textContent = uiLang === 'zh'
       ? `由 ${s.kb_prompts.toLocaleString()} 条专业prompt驱动 · 已生成 ${s.saved_prompts} 个prompt`
       : `Powered by ${s.kb_prompts.toLocaleString()} expert prompts · ${s.saved_prompts} prompts generated`;
+    // Update hero stats with real data
+    const hkb = document.getElementById('heroStatKB');
+    if (hkb) hkb.textContent = s.kb_prompts.toLocaleString();
   } catch {}
 }
 
